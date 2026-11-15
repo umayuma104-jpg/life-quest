@@ -49,10 +49,11 @@
   <section id="tab-today">
     <div class="card stage-card" id="bossCard"></div>
     <div class="card">
-      <div class="card-h"><span>今日のクエスト</span><span class="prog" id="todayProg">0/0</span></div>
+      <div class="card-h"><span>今日のクエスト <span class="prog" id="todayProg">0/0</span></span><button class="btn sm gray" id="retroBtn">昨日の記録</button></div>
       <div id="taskList"></div>
       <div class="dayline" id="dayLine"></div>
     </div>
+    <div class="card" id="goalCard"></div>
   </section>
 
   <!-- ステータス -->
@@ -64,6 +65,7 @@
       <div class="card-h mt12"><span>装備</span><button class="btn sm" id="equipBtn">装備を変更</button></div>
       <div id="equipList"></div>
     </div>
+    <div class="card" id="petCard"></div>
     <div class="card"><div class="card-h"><span>能力</span></div><div id="statList"></div></div>
     <div class="card"><div class="kpis" id="kpis"></div></div>
   </section>
@@ -125,6 +127,7 @@
 <script src="js/sprites.js"></script>
 <script src="js/catalog.js"></script>
 <script src="js/gear.js"></script>
+<script src="js/pets.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

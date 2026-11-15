@@ -392,10 +392,13 @@
     chest: { pal: { k: '#3a2410', R: '#a0683a', Y: '#f2c14e' }, rows: ['.kkkkkk.', 'kRRRRRRk', 'kRYRRYRk', 'kkkYYkkk', 'kRRYYRRk', 'kRRRRRRk', 'kRRRRRRk', 'kkkkkkkk'] },
     bag: { pal: { k: '#5e3a1a', b: '#b07a45', Y: '#f2c14e' }, rows: ['..kkkk..', '.k....k.', '..kkkk..', '.kbbbbk.', 'kbbbbbbk', 'kbbYbbbk', 'kbbbbbbk', '.kkkkkk.'] },
     goldbag: { pal: { k: '#8a5a10', Y: '#f2c14e', G: '#fff6b0' }, rows: ['...kk...', '..kYYk..', '...kk...', '.kYYYYk.', 'kYYGYYYk', 'kYGGGYYk', 'kYYGYYYk', '.kkkkkk.'] },
+    meat: { pal: { r: '#b0502a', R: '#e08060', w: '#f4efe3', k: '#c8c0b0' }, rows: ['......ww', '.....wwk', '..rrrk..', '.rRrrr..', 'rRrrrr..', 'rrrrrr..', '.rrrr...', '..rr....'] },
+    cookie: { pal: { y: '#d9a066', c: '#5e3a1a', p: '#ff7ad9' }, rows: ['..yyyy..', '.yycyyy.', 'yyyyypyy', 'ycyyyycy', 'yyypyyyy', 'yyyycyyy', '.yyyyyy.', '..yyyy..'] },
+    fruit: { pal: { p: '#ff4a9a', g: '#3cdc6c' }, rows: ['...gg...', '..g..g..', '..pppp..', '.pgppgp.', 'pppppppp', 'ppgppgpp', '.pppppp.', '..pppp..'] },
     coin: { pal: { y: '#fce35a', Y: '#fff6b0', o: '#c9952b', k: '#5a3a00' }, rows: ['..kkkk..', '.kyyyyk.', 'kyYYyyok', 'kyYyyyok', 'kyyyyyok', 'kyyyyook', '.koooook'.slice(0, 7) + '.', '..kkkk..'] },
   };
   // クエスト用に選べるアイコン（画面用のアイコンは除く）
-  const ICON_KEYS = Object.keys(ICONS).filter(k => !['sword', 'shield', 'gear', 'mail', 'coin', 'potion', 'bomb', 'xpbook', 'charm', 'gem', 'chest', 'bag', 'goldbag'].includes(k));
+  const ICON_KEYS = Object.keys(ICONS).filter(k => !['sword', 'shield', 'gear', 'mail', 'coin', 'potion', 'bomb', 'xpbook', 'charm', 'gem', 'chest', 'bag', 'goldbag', 'meat', 'cookie', 'fruit'].includes(k));
   function icon(key, size = 28) {
     const ic = ICONS[key];
     if (!ic) return null;

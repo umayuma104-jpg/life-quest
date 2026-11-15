@@ -358,3 +358,30 @@ label.lb { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4p
 .tut-box { position: fixed; left: 12px; right: 12px; max-width: 520px; margin: 0 auto; background: var(--card); border: 3px double var(--frame); border-radius: 10px; padding: 12px 14px; }
 .tut-step { font-size: 11px; color: var(--dim); }
 .tut-text { line-height: 1.7; margin-top: 4px; }
+
+/* ---------- 目標 ---------- */
+.goal { padding: 6px 0; border-top: 1px solid var(--line); }
+.goal:first-of-type { border-top: 0; }
+.goal-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.goal-rw { font-size: 11px; color: var(--y); }
+.goal.done .goal-top span:first-child { color: var(--g); }
+.bar.goalbar i { background: var(--y); }
+.goal.done .bar.goalbar i { background: var(--g); }
+#retroBtn { color: #fff; }
+.rinput { width: 84px; }
+.list-row .rinput { flex-shrink: 0; }
+
+/* ---------- ペット ---------- */
+.pet-row { display: flex; gap: 12px; align-items: center; }
+.pet-pic { background: #0a0a2a; border-radius: 10px; padding: 4px; }
+.bar.petbar i { background: #ff9ab0; }
+.pet-fx { font-size: 13px; color: var(--y); margin-top: 6px; }
+.pet-line { display: flex; justify-content: space-around; text-align: center; margin: 6px 0; }
+.pet-banner { background: linear-gradient(180deg, #1a3a3a, #12123a); border-color: #3cdc6c; }
+.pet-banner .gb-title { color: #9af0a0; text-shadow: 0 0 8px #3cdc6c; }
+.st-pet { position: absolute; left: 2%; bottom: 12px; z-index: 2; animation: bob 0.9s steps(2) infinite; }
+.st-pet.atk { animation: hop .5s steps(4); }
+@keyframes hop { 40% { transform: translate(140%, -14px); } 60% { transform: translateX(140%); } }
+.st-dmg.pet { color: #9af0a0; font-size: 16px; bottom: 60px; right: 26%; }
+.rare.r2, .g-card.r2 .g-st { color: #9a9ad0; }
+.seg .btn { padding: 4px 2px; }

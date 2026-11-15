@@ -3,6 +3,7 @@
   const S = window.Sprites;
   const CAT = window.Catalog;
   const G = window.Gear;
+  const P = window.Pets;
   const GOLD_PER_CLEAR = 20, GOLD_BOSS = 100, GOLD_LEVEL = 50;
   const GEM_CLEAR = 5, GEM_BOSS = 30, GEM_LEVEL = 10, GEM_ACH = 20;
   const KEY = 'lifeQuest.v1';
@@ -57,6 +58,7 @@
       onboarded: false, sound: true, vibe: true, lastBackup: null, backupMailed: null,
       owned: [], buys: [], gearLog: [], look: { hair: 'short', color: 0, skin: 0 },
       pulls: [], gachaLog: [], itemBuys: [], uses: [],
+      feeds: [], petLog: [], petGearLog: [], foodBuys: [], petGachaLog: [], retro: [], fontScale: 1,
       notify: { on: false, morning: '07:00', evening: '21:00', sent: {} },
     };
   }
@@ -80,7 +82,8 @@
     if (!Array.isArray(s.owned)) s.owned = [];
     if (!Array.isArray(s.buys)) s.buys = [];
     if (!Array.isArray(s.gearLog)) s.gearLog = [];
-    ['pulls', 'gachaLog', 'itemBuys', 'uses'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+    ['pulls', 'gachaLog', 'itemBuys', 'uses', 'feeds', 'petLog', 'petGearLog', 'foodBuys', 'petGachaLog', 'retro'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+    if (!s.fontScale) s.fontScale = 1;
     if (!s.look) s.look = { hair: 'short', color: 0, skin: 0 };
     if (s.name === 'ぼうけんしゃ') s.name = '冒険者';
     if (!s.sched) {
@@ -199,12 +202,15 @@
   // 開始から何週目かで決まる。弱い順に1体ずつ登場し、週を重ねるほどHPと報酬が上がる。20体で一巡すると強化版
   function bossFor(ws, byId, firstWs) {
     const n = Math.max(0, Math.round(daysBetween(firstWs, ws) / 7));
-    let base = 0;
+    let base = 0, days = 0;
     for (let i = 0; i < 7; i++) {
       const k = addDays(ws, i);
       if (k < state.start) continue;
+      days++;
       base += schedIds(k).reduce((a, id) => a + (byId[id] ? byId[id].xp : 0), 0);
     }
+    // 週の途中から始めた場合も、最低4日分のHPにする（1回の記録で倒せないように）
+    if (days > 0 && days < 4) base = base / days * 4;
     const scale = Math.min(2, 1 + 0.04 * n);
     const hp = Math.max(50, Math.round(base * 0.7 * scale));
     const idx = S.BOSS_ORDER[n % S.BOSS_ORDER.length];
@@ -213,6 +219,31 @@
       reward: Math.round(hp * 0.3), gold: GOLD_BOSS + 10 * Math.min(n, 40) };
   }
 
+  // ---------- 今週・今月の目標 ----------
+  // 週ごとに、今のクエストから作れる目標の中から3つを選ぶ（日付で決まるので毎回同じ）
+  const GOAL_REWARD = { week: [100, 10], month: [400, 40] };
+  function weekGoals(ws) {
+    const cands = [
+      { key: 'clear', name: '達成 5日', stat: 'clear', goal: 5 },
+      { key: 'perfect', name: '全クリア 3日', stat: 'perfect', goal: 3 },
+      { key: 'boss', name: '今週のボスを倒す', stat: 'boss', goal: 1 },
+    ];
+    activeTasks().forEach(t => {
+      if (t.type === 'count') cands.push({ key: 'sum_' + t.id, name: `${t.name} 合計${fmtNum(t.target * 5)}${t.unit}`, stat: 'sum_' + t.id, goal: t.target * 5 });
+      if (t.type === 'wake') cands.push({ key: 'wake', name: '早起き 5回', stat: 'wake', goal: 5 });
+    });
+    const picked = [];
+    let h = hash('goal' + ws);
+    while (picked.length < 3 && cands.length) { picked.push(cands.splice(h % cands.length, 1)[0]); h = Math.floor(h / 7) + 13; }
+    return picked;
+  }
+  const monthGoals = () => [
+    { key: 'm_clear', name: '達成 20日', stat: 'clear', goal: 20 },
+    { key: 'm_boss', name: 'ボス討伐 3体', stat: 'boss', goal: 3 },
+  ];
+  const fmtNum = n => Number.isInteger(n) ? n : Math.round(n * 10) / 10;
+  const monthOf = k => k.slice(0, 7);
+
   // 開始日から今日まで1日ずつ再生して、すべての数値を計算する
   function compute() {
     const tKey = todayKey();
@@ -220,8 +251,14 @@
     const cat = { str: 0, int: 0, mnd: 0, vit: 0 };
     const perDay = {}, events = [], bosses = {}, ach = {};
     let total = 0, hp = MAX_HP, streak = 0, freezes = 0, boss = null;
-    let earned = 0, maxHp = MAX_HP, lvNow = 1, gems = 0, poison = 0, guardWeek = null;
+    let earned = 0, maxHp = MAX_HP, lvNow = 1, gems = 0, poison = 0, guardWeek = null, reviveWeek = null;
     const st = { best: 0, clearedDays: 0, perfect: 0, bossWins: 0, wakes: 0, reps: 0, lv: 1, buys: 0, tierSet: 0, frozenDays: 0, knockouts: 0 };
+    // ペット
+    const petExp = {}, foodLv = { meat: 0, cookie: 0, fruit: 0 };
+    let petUnlock = null;
+    // 目標
+    let wk = null, mo = null;
+    const goalsDone = {};
     let first = state.start;
     const logFirst = Object.keys(state.log).sort()[0];
     if (logFirst && logFirst < first) first = logFirst;
@@ -229,12 +266,20 @@
     for (let k = first; k <= tKey; k = addDays(k, 1)) {
       const ws = weekStart(k);
       if (!boss || boss.ws !== ws) { boss = bossFor(ws, byId, firstWs); bosses[ws] = boss; poison = 0; }
+      if (!wk || wk.ws !== ws) wk = { ws, goals: weekGoals(ws), c: {} };
+      if (!mo || mo.m !== monthOf(k)) mo = { m: monthOf(k), goals: monthGoals(), c: {} };
       const entries = state.log[k] || {};
       const ids = schedIds(k).filter(id => byId[id]);
       const bonusId = bonusIdOf(k, ids);
       const mult = bonusFor(streak);
       const gs = G.stats(gearOn(k));
-      maxHp = MAX_HP + gs.hp; hp = Math.min(hp, maxHp);
+      // ペット：その日に連れているペットと、餌の経験値
+      state.feeds.filter(f => f.k === k).forEach(f => { petExp[f.pet] = (petExp[f.pet] || 0) + P.FOODS[f.food].exp; });
+      const pet = petOn(k, petUnlock);
+      const pf = pet ? P.stats(pet, P.levelOf(petExp[pet] || 0).lv, petGearOn(k)) : P.stats(null);
+      maxHp = MAX_HP + gs.hp + Math.round(pf.hp); hp = Math.min(hp, maxHp);
+      if (pf.regen) hp = Math.min(maxHp, hp + Math.round(pf.regen));
+      const expPct = gs.exp + pf.exp, goldPct = gs.gold + pf.gold, critPct = gs.crit + pf.crit, defPct = Math.min(70, gs.def + pf.def);
       // その日に使ったアイテム
       const used = state.uses.filter(u => u.k === k);
       const bookX = used.some(u => u.id === 'xpbook') ? 1.5 : 1;
@@ -243,15 +288,18 @@
         if (u.id === 'charm') freezes++;
         if (u.id === 'bomb') boss.dmg += Math.round(boss.hp * 0.2);
       });
-      let dayXp = 0, done = 0, dayGold = 0, bossDmg = 0, dotDmg = 0;
+      let dayXp = 0, done = 0, dayGold = 0, bossDmg = 0, dotDmg = 0, petDmg = 0;
       for (const id in entries) {
         const t = byId[id]; if (!t) continue;
         const c = completion(t, entries[id]);
-        const g = Math.round(t.xp * c * mult * (id === bonusId ? 2 : 1) * (1 + gs.exp / 100) * bookX);
+        const g = Math.round(t.xp * c * mult * (id === bonusId ? 2 : 1) * (1 + expPct / 100) * bookX);
         dayXp += g; cat[t.cat] += g;
-        bossDmg += Math.round(g * (1 + gs.atk / 100) * (c >= 1 && isCrit(k, id, gs.crit) ? 2 : 1));
+        const hit = Math.round(g * (1 + gs.atk / 100) * (c >= 1 && isCrit(k, id, critPct) ? 2 : 1));
+        bossDmg += hit;
+        petDmg += Math.round(hit * pf.follow / 100);
         if (c >= 1 && ids.includes(id)) done++;
-        if (t.type === 'wake' && c >= 1) st.wakes++;
+        if (t.type === 'wake' && c >= 1) { st.wakes++; wk.c.wake = (wk.c.wake || 0) + 1; }
+        if (t.type === 'count') wk.c['sum_' + id] = (wk.c['sum_' + id] || 0) + (Number(entries[id]) || 0);
         if (t.type === 'count' && t.unit === '回') st.reps += Number(entries[id]) || 0;
       }
       const count = ids.length, recorded = Object.keys(entries).length > 0;
@@ -261,7 +309,8 @@
       if (count === 0) status = 'rest';
       else if (cleared) {
         status = 'cleared'; streak++; st.clearedDays++; st.best = Math.max(st.best, streak);
-        if (done >= count) st.perfect++;
+        wk.c.clear = (wk.c.clear || 0) + 1; mo.c.clear = (mo.c.clear || 0) + 1;
+        if (done >= count) { st.perfect++; wk.c.perfect = (wk.c.perfect || 0) + 1; }
         hp = Math.min(maxHp, hp + HEAL);
         dayGold += GOLD_PER_CLEAR;
         if (streak % FREEZE_EVERY === 0) { freezes++; events.push({ k, icon: '❄', title: '氷のお守りを手に入れた', text: `${streak}日連続で達成！ 氷のお守りを手に入れた（所持 ${freezes}個）` }); }
@@ -273,11 +322,14 @@
         freezes--; st.frozenDays++; status = 'frozen';
         events.push({ k, icon: '🧊', title: '氷のお守りが身を守った', text: `未達成だったが、氷のお守りが身を守った。連続${streak}日は継続（残り ${freezes}個）` });
       } else {
-        const dmg = Math.round((recorded ? DMG_PARTIAL : DMG_NONE) * (1 - gs.def / 100));
+        const dmg = Math.round((recorded ? DMG_PARTIAL : DMG_NONE) * (1 - defPct / 100));
         hp -= dmg; status = 'damage';
         const lost = streak; streak = 0;
         events.push({ k, icon: '💥', title: `${boss.name}の攻撃 ${dmg}ダメージ`, text: `${recorded ? '未達成' : '記録なし'}の隙を突かれた… HPが${Math.max(0, hp)}に減った。${lost ? `連続${lost}日が途切れた。` : ''}` });
-        if (hp <= 0) {
+        if (hp <= 0 && pf.revive && reviveWeek !== ws) {
+          reviveWeek = ws; hp = 1;
+          events.push({ k, icon: '🔥', title: '不死鳥の加護', text: `力尽きかけたが、${P.PETS[pet].name}の炎でよみがえった！（HP1）` });
+        } else if (hp <= 0) {
           const L = levelOf(total), lostXp = Math.floor(L.rest / 2);
           total -= lostXp; hp = maxHp; st.knockouts++;
           events.push({ k, icon: '☠', title: '戦闘不能', text: `力尽きた… ${lostXp}EXPを失った。HPは全回復した。` });
@@ -285,21 +337,35 @@
       }
       // 火傷・毒：その日にクエストをこなしていれば、ボスに持続ダメージ
       if (dayXp > 0 && !boss.defeated) {
-        if (gs.burn) dotDmg += Math.round(boss.hp * gs.burn / 100);
+        const burn = gs.burn + pf.burn;
+        if (burn) dotDmg += Math.round(boss.hp * burn / 100);
         if (gs.poison) { poison = Math.min(7, poison + 1); dotDmg += Math.round(boss.hp * gs.poison * poison / 100); }
       }
-      boss.dmg += bossDmg + dotDmg;
+      boss.dmg += bossDmg + dotDmg + petDmg;
       if (!boss.defeated && boss.dmg >= boss.hp) {
         boss.defeated = k; total += boss.reward; st.bossWins++; dayGold += boss.gold; gems += GEM_BOSS;
+        wk.c.boss = 1; mo.c.boss = (mo.c.boss || 0) + 1;
         if (gs.freezeOnBoss) freezes += gs.freezeOnBoss;
         events.push({ k, icon: '⚔', title: `${boss.name}を倒した`, text: `${boss.reward}EXP・${boss.gold}G・${GEM_BOSS}💎を獲得！${gs.freezeOnBoss ? ` 氷竜の斧の力で❄+${gs.freezeOnBoss}` : ''}` });
       }
       if (cleared) gems += GEM_CLEAR;
       dayGold += Math.round(dayXp / 2);
-      dayGold = Math.round(dayGold * (1 + gs.gold / 100));
+      dayGold = Math.round(dayGold * (1 + goldPct / 100));
       const lvEnd = levelOf(total).lv;
-      if (lvEnd > lvNow) { dayGold += (lvEnd - lvNow) * GOLD_LEVEL; gems += (lvEnd - lvNow) * GEM_LEVEL; }
+      if (lvEnd > lvNow) {
+        const n = lvEnd - lvNow;
+        dayGold += n * GOLD_LEVEL; gems += n * GEM_LEVEL;
+        // レベルアップ報酬：ペットの餌（5の倍数で竜の果実）
+        foodLv.meat += 2 * n;
+        for (let l = lvNow + 1; l <= lvEnd; l++) if (l % 5 === 0) foodLv.fruit++;
+      }
       lvNow = Math.max(lvNow, lvEnd);
+      if (!petUnlock && lvNow >= P.UNLOCK_LV) {
+        petUnlock = k;
+        events.push({ k, icon: '🐾', title: 'ペットが仲間になった', text: `Lv${P.UNLOCK_LV}に到達！ ${P.PETS.slime.name}が仲間になった。ステータス画面で育てよう。` });
+      }
+      // 連れているペットは、主人公が稼いだEXPの半分を経験値にする
+      if (pet && dayXp > 0) petExp[pet] = (petExp[pet] || 0) + Math.round(dayXp / 2);
       st.lv = lvNow;
       st.buys = state.buys.filter(b => b.k <= k).length;
       st.tierSet = tierSetOn(k);
@@ -309,17 +375,57 @@
           events.push({ k, icon: '🏆', title: `実績「${a.name}」`, text: `実績を達成した！ 報酬 ${a.reward}G・${GEM_ACH}💎` });
         }
       });
+      // 目標の達成チェック
+      [['week', wk.ws, wk], ['month', mo.m, mo]].forEach(([kind, id, box]) => box.goals.forEach(g => {
+        const gk = `${kind}:${id}:${g.key}`;
+        if (!goalsDone[gk] && (box.c[g.stat] || 0) >= g.goal) {
+          goalsDone[gk] = k;
+          const [gg, gm] = GOAL_REWARD[kind];
+          dayGold += gg; gems += gm;
+          events.push({ k, icon: '🎯', title: `${kind === 'week' ? '今週' : '今月'}の目標「${g.name}」`, text: `目標を達成した！ 報酬 ${gg}G・${gm}💎` });
+        }
+      }));
       earned += dayGold;
-      perDay[k] = { xp: dayXp, done, count, cleared, mult, status, hp, recorded, bossDmg, dotDmg, poison, gold: dayGold, bonusId };
+      perDay[k] = { xp: dayXp, done, count, cleared, mult, status, hp, recorded, bossDmg, dotDmg, petDmg, poison, gold: dayGold, bonusId, pet };
     }
     const today = perDay[tKey];
-    const spent = state.buys.reduce((a, b) => a + b.price, 0) + state.itemBuys.reduce((a, b) => a + b.price, 0);
+    const spent = state.buys.reduce((a, b) => a + b.price, 0) + state.itemBuys.reduce((a, b) => a + b.price, 0)
+      + state.foodBuys.reduce((a, b) => a + b.price, 0) + state.petGachaLog.filter(g => g.cur === 'gold').reduce((a, g) => a + g.cost, 0);
     const bags = state.pulls.filter(p => p.type === 'gold').reduce((a, p) => a + p.amount, 0);
-    const gemNow = gems + state.pulls.reduce((a, p) => a + (p.refund || 0), 0) - state.gachaLog.reduce((a, g) => a + g.cost, 0);
-    return { gems: gemNow, poison, total, cat, perDay, events, bosses, boss: bosses[weekStart(tKey)], streak, best: st.best, freezes, hp, maxHp,
+    const gemNow = gems + state.pulls.reduce((a, p) => a + (p.refund || 0), 0) - state.gachaLog.reduce((a, g) => a + g.cost, 0)
+      - state.petGachaLog.filter(g => g.cur === 'gem').reduce((a, g) => a + g.cost, 0);
+    const petNow = petOn(tKey, petUnlock);
+    const goalView = (kind, box) => box.goals.map(g => ({ ...g, cur: box.c[g.stat] || 0, done: goalsDone[`${kind}:${kind === 'week' ? box.ws : box.m}:${g.key}`] }));
+    return { gems: Math.max(0, gemNow), poison, total, cat, perDay, events, bosses, boss: bosses[weekStart(tKey)], streak, best: st.best, freezes, hp, maxHp,
       clearedDays: st.clearedDays, frozenDays: st.frozenDays, knockouts: st.knockouts, bossWins: st.bossWins, st, ach,
-      mult: today ? today.mult : bonusFor(streak), earned: earned + bags, gold: earned + bags - spent, gearStats: G.stats(gearOn(tKey)) };
+      mult: today ? today.mult : bonusFor(streak), earned: earned + bags, gold: Math.max(0, earned + bags - spent), gearStats: G.stats(gearOn(tKey)),
+      petUnlock, petExp, pet: petNow, petFx: petNow ? P.stats(petNow, P.levelOf(petExp[petNow] || 0).lv, petGearOn(tKey)) : null, foodLv,
+      goals: { week: goalView('week', wk), month: goalView('month', mo) } };
   }
+
+  // ---------- ペットの持ち物と状態 ----------
+  // 持っているペット：最初のスライム（Lv5で解放）＋ガチャで出たペット
+  function ownedPets(k, unlock) {
+    const list = [];
+    if (unlock && unlock <= k) list.push('slime');
+    state.pulls.forEach(p => { if (p.type === 'pet' && p.k <= k && !list.includes(p.id)) list.push(p.id); });
+    return list;
+  }
+  function petOn(k, unlock) {
+    const own = ownedPets(k, unlock);
+    if (!own.length) return null;
+    let cur = own[0];
+    state.petLog.forEach(e => { if (e.k <= k && own.includes(e.id)) cur = e.id; });
+    return cur;
+  }
+  function petGearOn(k) {
+    const g = {};
+    state.petGearLog.forEach(e => { if (e.k <= k) g[e.slot] = e.id; });
+    return g;
+  }
+  const petGearOwned = () => [...new Set(state.pulls.filter(p => p.type === 'petgear').map(p => p.id))];
+  const foodCount = id => (C ? C.foodLv[id] : 0) + state.pulls.filter(p => p.type === 'food' && p.id === id).reduce((a, p) => a + (p.n || 1), 0)
+    + state.foodBuys.filter(b => b.id === id).length - state.feeds.filter(f => f.food === id).length;
 
   // ---------- サウンド・振動 ----------
   let actx = null;
@@ -426,6 +532,8 @@
       sec('ボス', ['毎週月曜に出現。全20体、週を重ねるほど強くなる', '稼いだEXPがそのままダメージになる', `クエスト完了時、たまに<span class="y">会心の一撃</span>（ダメージ2倍）`]),
       sec('報酬', [`ゴールド：EXPの半分＋達成${GOLD_PER_CLEAR}＋ボス${GOLD_BOSS}〜＋レベルアップ${GOLD_LEVEL}＋実績`, `💎ジェム：達成${GEM_CLEAR}・ボス${GEM_BOSS}・実績${GEM_ACH}・レベルアップ${GEM_LEVEL}`]),
       sec('装備・ガチャ・アイテム', ['頭・足・武器は攻撃、体・脚・サブは守り', 'ガチャ限定装備は火傷・毒などの特殊能力つき。同じセットを3・6部位そろえるとセット効果', 'アイテムは右上の👜から使う']),
+      sec('ペット', [`Lv${P.UNLOCK_LV}で仲間になる。連れているペットは追撃やステータスで手伝ってくれる`, '餌やクエストで経験値がたまり、レベルが上がるほど強くなる', '首飾りと帽子を装備できる。ペットガチャはゴールドでもジェムでも引ける']),
+      sec('目標・昨日の記録', [`今週の目標3つ（各${GOAL_REWARD.week[0]}G・${GOAL_REWARD.week[1]}💎）と今月の目標2つ（各${GOAL_REWARD.month[0]}G・${GOAL_REWARD.month[1]}💎）`, `記録し忘れた昨日の分は、週に${RETRO_MAX}回まで追加・修正できる`]),
       sec('その他', ['早起きは30分以内の遅れならEXP半分', '回数を増やすと獲得EXPも増える', '日付の切り替えは午前3時']),
     ].join(''));
   }
@@ -452,7 +560,7 @@
     $('streakNum').textContent = c.streak;
     $('freezeNum').textContent = c.freezes;
     $('multNum').textContent = c.mult.toFixed(2).replace(/0$/, '');
-    renderBoss(c); renderToday(c, L); renderStats(c, L); renderShop(c); renderLog(c); renderBadge();
+    renderBoss(c); renderToday(c, L); renderGoals(c); renderStats(c, L); renderPet(c); renderShop(c); renderLog(c); renderBadge();
     // 新しく達成した実績を知らせる
     const got = Object.keys(c.ach);
     if (knownAch) got.filter(k2 => !knownAch.has(k2)).forEach((k2, i) => {
@@ -497,6 +605,7 @@
       <div class="st-sub"><span>HP ${left}/${b.hp}</span>
         <span>${!b.defeated && gs.burn ? `<span class="burn">🔥毎日−${Math.round(b.hp * gs.burn / 100)}</span> ` : ''}${!b.defeated && gs.poison ? `<span class="pois">☠毒${c.poison}</span> ` : ''}報酬 ${b.reward}EXP ${b.gold}G</span></div>
       <div class="stage" id="stage">
+        ${c.pet ? `<div class="st-pet">${P.svg(c.pet, 34, petGearOn(t))}</div>` : ''}
         <div class="st-hero">${heroSvg(60)}</div>
         <div class="st-boss" id="bossPic">${S.boss(b.idx, 76)}</div>
         <div class="st-ground"></div>
@@ -520,6 +629,14 @@
       n.innerHTML = (opts.crit ? '<small>会心！</small>' : '') + dmg;
       st.appendChild(n); setTimeout(() => n.remove(), 1100);
       if (opts.crit || opts.bomb) restart(st, 'quake');
+      if (opts.pet > 0) {
+        const pt = st.querySelector('.st-pet');
+        setTimeout(() => {
+          if (pt) restart(pt, 'atk');
+          const pn = document.createElement('div'); pn.className = 'st-dmg pet'; pn.textContent = '+' + opts.pet;
+          st.appendChild(pn); setTimeout(() => pn.remove(), 1100);
+        }, 380);
+      }
       if (opts.killed) {
         restart(boss, 'dying');
         setTimeout(() => { if (!st.querySelector('.st-win')) { const w = document.createElement('div'); w.className = 'st-win'; w.textContent = '討伐！'; st.appendChild(w); } }, 500);
@@ -672,7 +789,10 @@
     const tNew = titleOf(to);
     if (tNew !== titleOf(from)) lines.push(`称号「<span class="y">${tNew}</span>」`);
     if (slotsFor(to) > slotsFor(from)) lines.push(`クエスト枠が<span class="y">${slotsFor(to)}</span>に増えた`);
-    lines.push(`ボーナス <span class="y">${(to - from) * GOLD_LEVEL}G</span>`);
+    lines.push(`ボーナス <span class="y">${(to - from) * GOLD_LEVEL}G・${(to - from) * GEM_LEVEL}💎</span>`);
+    const fruits = Array.from({ length: to - from }, (_, i) => from + 1 + i).filter(l => l % 5 === 0).length;
+    lines.push(`ペットの餌 <span class="y">干し肉×${(to - from) * 2}${fruits ? `・竜の果実×${fruits}` : ''}</span>`);
+    if (from < P.UNLOCK_LV && to >= P.UNLOCK_LV) lines.push(`<span class="y">${P.PETS.slime.name}が仲間になった！</span>`);
     $('lvHero').innerHTML = heroSvg(96);
     $('lvModalNum').textContent = to;
     $('lvModalInfo').innerHTML = lines.join('<br>') || '力がみなぎる！';
@@ -695,7 +815,7 @@
     $('shopHero').innerHTML = heroSvg(84, preview);
     $('shopGold').textContent = c.gold.toLocaleString();
     $('shopGems').textContent = c.gems.toLocaleString();
-    $('shopTabs').innerHTML = [['gear', '装備'], ['item', 'アイテム'], ['gacha', 'ガチャ'], ['gem', 'ジェム']]
+    $('shopTabs').innerHTML = [['gear', '装備'], ['item', 'アイテム'], ['gacha', 'ガチャ'], ['pet', 'ペット'], ['gem', 'ジェム']]
       .map(([k, n]) => `<button class="btn ${k === shopTab ? 'on' : ''}" data-stab="${k}">${n}</button>`).join('');
     $('shopStats').innerHTML = shopTab === 'gear'
       ? `攻撃 +${now.atk}%${diff(now.atk, after.atk, '%')}<br>最大HP ${MAX_HP + now.hp}${diff(now.hp, after.hp, '', '')}<br>被ダメージ −${now.def}%${diff(now.def, after.def, '%', '−')}`
@@ -720,6 +840,23 @@
         <div class="item-ic">${S.icon(it.icon, 32)}</div>
         <div class="grow"><div>${it.name} <span class="dim">所持 ${itemCount(id)}</span></div><div class="dim">${it.desc}</div></div>
         <button class="btn sm" data-ibuy="${id}" ${c.gold < it.price ? 'disabled' : ''}>${it.price}G</button></div>`).join('');
+    } else if (shopTab === 'pet') {
+      if (!c.petUnlock) html = `<div class="card center"><div>${P.svg('slime', 64, null, { silhouette: true })}</div><div class="mt8">Lv${P.UNLOCK_LV}でペットが仲間になると使えます</div></div>`;
+      else {
+        const Q = P.GACHA;
+        html = `<div class="card gacha-banner pet-banner"><div class="gb-title">ペットガチャ</div>
+          <div class="pet-line">${Object.keys(P.PETS).filter(id => P.PETS[id].rarity >= 4).map(id => `<div>${P.svg(id, 40)}<div class="rare r${P.PETS[id].rarity}">${stars(P.PETS[id].rarity)}</div></div>`).join('')}</div>
+          <div class="dim small center">ペット ${Q.table[0][2] + Q.table[1][2]}%・ペット装備 ${Q.table[2][2]}%・餌 ${Q.table.slice(3).reduce((a, t) => a + t[2], 0)}%　／　ペット確定まであと<span class="y">${Q.pity - petPityCount()}</span>回</div>
+          <div class="row mt12"><button class="btn" data-ppull="1:gold" ${c.gold < Q.gold1 ? 'disabled' : ''}>1回 ${S.icon('coin', 14)}${Q.gold1}</button>
+            <button class="btn" data-ppull="10:gold" ${c.gold < Q.gold10 ? 'disabled' : ''}>10回 ${S.icon('coin', 14)}${Q.gold10}</button></div>
+          <div class="row mt8"><button class="btn blue" data-ppull="1:gem" ${c.gems < Q.gem1 ? 'disabled' : ''}>1回 ${S.icon('gem', 14)}${Q.gem1}</button>
+            <button class="btn blue" data-ppull="10:gem" ${c.gems < Q.gem10 ? 'disabled' : ''}>10回 ${S.icon('gem', 14)}${Q.gem10}</button></div>
+          <div class="row mt8"><button class="btn sm gray" data-prates="1">提供割合</button><button class="btn sm gray" data-phist="1">履歴</button></div></div>
+          <div class="dim" style="margin:10px 2px 4px">餌</div>`
+          + Object.entries(P.FOODS).map(([fid, f]) => `<div class="card item"><div class="item-ic">${S.icon(f.icon, 32)}</div>
+            <div class="grow"><div>${f.name} <span class="dim">所持 ${foodCount(fid)}</span></div><div class="dim">ペットの経験値+${f.exp}</div></div>
+            <button class="btn sm" data-fbuy="${fid}" ${c.gold < f.price ? 'disabled' : ''}>${f.price}G</button></div>`).join('');
+      }
     } else if (shopTab === 'gacha') {
       const pity = G.GACHA.pity - pityCount();
       html = `<div class="card gacha-banner">
@@ -754,7 +891,7 @@
     tryOn = null; save(); render();
   }
   $('tab-shop').addEventListener('click', e => {
-    const el = e.target.closest('[data-stab],[data-slot],[data-equip],[data-buy],[data-ibuy],[data-pull],[data-rates],[data-sets],[data-hist],[data-try]'); if (!el) return;
+    const el = e.target.closest('[data-stab],[data-slot],[data-equip],[data-buy],[data-ibuy],[data-pull],[data-rates],[data-sets],[data-hist],[data-ppull],[data-fbuy],[data-prates],[data-phist],[data-try]'); if (!el) return;
     if (el.disabled) return;
     SFX.tap();
     const d = el.dataset;
@@ -777,6 +914,26 @@
       });
     }
     if (d.pull) return pullGacha(Number(d.pull));
+    if (d.ppull) { const [n, cur] = d.ppull.split(':'); return pullPet(Number(n), cur); }
+    if (d.fbuy) {
+      const f = P.FOODS[d.fbuy];
+      return confirmBuy(S.icon(f.icon, 40), f.name, `ペットの経験値+${f.exp}`, f.price, () => {
+        state.foodBuys.push({ k: todayKey(), id: d.fbuy, price: f.price }); save(); render(); say(`${f.name}を買った！`); SFX.done();
+      });
+    }
+    if (d.prates) {
+      const T = P.GACHA.table, tot = T.reduce((a, t) => a + t[2], 0);
+      const p5 = Object.keys(P.PETS).filter(id => P.PETS[id].rarity === 5), p4 = Object.keys(P.PETS).filter(id => P.PETS[id].rarity === 4), gl = Object.keys(P.GEAR);
+      return openSheet('ペットガチャの提供割合', `<div class="dim">${P.GACHA.pity}回引くとペット確定。持っているペット・装備が出たら餌に変わる（ペット→竜の果実×2、装備→魔法のクッキー×2）。</div>
+        <div class="card-h mt12"><span>★5 ペット</span></div>${p5.map(id => `<div class="eq"><span>${P.PETS[id].name}</span><span>${(T[0][2] / tot * 100 / p5.length).toFixed(2)}%</span></div>`).join('')}
+        <div class="card-h mt12"><span>★4 ペット</span></div>${p4.map(id => `<div class="eq"><span>${P.PETS[id].name}</span><span>${(T[1][2] / tot * 100 / p4.length).toFixed(2)}%</span></div>`).join('')}
+        <div class="card-h mt12"><span>ペット装備</span></div>${gl.map(id => `<div class="eq"><span>${P.GEAR[id].name}</span><span>${(T[2][2] / tot * 100 / gl.length).toFixed(2)}%</span></div>`).join('')}
+        <div class="card-h mt12"><span>餌</span></div>${T.slice(3).map(t => `<div class="eq"><span>${P.FOODS[t[1]].name}</span><span>${(t[2] / tot * 100).toFixed(2)}%</span></div>`).join('')}`);
+    }
+    if (d.phist) {
+      const list = state.pulls.filter(p => p.gacha === 'pet').slice(-50).reverse();
+      return openSheet('ペットガチャ履歴', list.length ? list.map(p => `<div class="eq"><span>${resultName(p)}</span><span class="dim">${md(p.k)}</span></div>`).join('') : '<div class="dim">まだ引いていません</div>');
+    }
     if (d.rates) return openRates();
     if (d.sets) return openSets();
     if (d.hist) return openHistory();
@@ -800,7 +957,8 @@
   // 最後に★5が出てから何回引いたか（天井用）
   function pityCount() {
     let n = 0;
-    for (let i = state.pulls.length - 1; i >= 0; i--) { if (state.pulls[i].r === 5) break; n++; }
+    const list = state.pulls.filter(p => p.gacha !== 'pet');
+    for (let i = list.length - 1; i >= 0; i--) { if (list[i].r === 5) break; n++; }
     return n;
   }
   function rollOne(minRarity) {
@@ -837,9 +995,15 @@
     showGachaResult(res);
     render();
   }
-  const resultIcon = (p, size) => p.type === 'gear' ? S.gearIcon(G.get(p.id).slot, G.get(p.id).art, size, state.look)
+  const resultIcon = (p, size) => p.type === 'pet' ? P.svg(p.id, size) : p.type === 'petgear' ? P.gearSvg(p.id, size) : p.type === 'food' ? S.icon(P.FOODS[p.id].icon, size)
+    : p.type === 'gear' ? S.gearIcon(G.get(p.id).slot, G.get(p.id).art, size, state.look)
     : p.type === 'gold' ? S.icon('goldbag', size) : S.icon(G.ITEMS[p.id].icon, size);
-  const resultName = p => p.type === 'gear' ? G.get(p.id).name : p.type === 'gold' ? `${p.amount}ゴールド` : G.ITEMS[p.id].name;
+  const resultName = p => p.type === 'pet' ? P.PETS[p.id].name : p.type === 'petgear' ? P.GEAR[p.id].name
+    : p.type === 'food' ? `${P.FOODS[p.id].name}${p.n > 1 ? '×' + p.n : ''}`
+    : p.type === 'gear' ? G.get(p.id).name : p.type === 'gold' ? `${p.amount}ゴールド` : G.ITEMS[p.id].name;
+  const resultNote = p => p.refund ? `<div class="g-dup">重複→${p.refund}💎</div>`
+    : p.dupPet ? `<div class="g-dup">${P.PETS[p.dupPet].name}（重複）</div>` : p.dupGear ? `<div class="g-dup">${P.GEAR[p.dupGear].name}（重複）</div>`
+    : ['gear', 'pet', 'petgear'].includes(p.type) ? '<div class="g-new">NEW</div>' : '';
   function showGachaResult(res) {
     const best = Math.max(...res.map(p => p.r));
     const box = $('gachaBox');
@@ -853,11 +1017,11 @@
       if (best === 5) { SFX.level(); vibrate([80, 40, 80, 40, 300]); } else if (best === 4) { SFX.clear(); vibrate([60, 40, 120]); } else SFX.done();
       flash();
       setTimeout(() => {
-        box.innerHTML = `<div class="g-title">${best === 5 ? '★5 伝説の装備！' : best === 4 ? '★4 獲得！' : 'ガチャ結果'}</div>
+        box.innerHTML = `<div class="g-title">${res.some(p => p.type === 'pet') ? 'ペットが仲間になった！' : best === 5 ? '★5 伝説の装備！' : best === 4 ? '★4 獲得！' : 'ガチャ結果'}</div>
           <div class="g-grid ${res.length === 1 ? 'one' : ''}">${res.map((p, i) => `<div class="g-card r${p.r}" style="animation-delay:${i * 90}ms">
             <div class="g-ic">${resultIcon(p, res.length === 1 ? 72 : 40)}</div>
             <div class="g-st">${stars(p.r)}</div><div class="g-nm">${resultName(p)}</div>
-            ${p.refund ? `<div class="g-dup">重複→${p.refund}💎</div>` : p.type === 'gear' ? '<div class="g-new">NEW</div>' : ''}</div>`).join('')}</div>
+            ${resultNote(p)}</div>`).join('')}</div>
           <div class="row mt12">${res.some(p => p.type === 'gear' && !p.refund) ? '<button class="btn blue" id="gEquip">装備を見る</button>' : ''}<button class="btn" id="gClose">閉じる</button></div>`;
         const ge = $('gEquip');
         if (ge) ge.onclick = () => { const p = res.find(q => q.type === 'gear' && !q.refund); $('gacha').classList.add('hidden'); shopTab = 'gear'; shopSlot = G.get(p.id).slot; tryOn = p.id; renderShop(C); };
@@ -881,8 +1045,181 @@
       <div class="grow"><div style="color:${st.color}">${st.name}</div><div class="small">3部位：${st.text3}</div><div class="small">6部位：${st.text6}</div></div></div></div>`).join(''));
   }
   function openHistory() {
-    const list = state.pulls.slice(-50).reverse();
+    const list = state.pulls.filter(p => p.gacha !== 'pet').slice(-50).reverse();
     openSheet('ガチャ履歴', list.length ? list.map(p => `<div class="eq"><span><span class="rare r${p.r}">${stars(p.r)}</span> ${resultName(p)}${p.refund ? ` <span class="dim">（${p.refund}💎）</span>` : ''}</span><span class="dim">${md(p.k)}</span></div>`).join('') : '<div class="dim">まだ引いていません</div>');
+  }
+
+  // ---------- 今週・今月の目標 ----------
+  function renderGoals(c) {
+    const row = (g, kind) => {
+      const [gg, gm] = GOAL_REWARD[kind];
+      const pct = Math.min(100, g.cur / g.goal * 100);
+      return `<div class="goal ${g.done ? 'done' : ''}"><div class="goal-top"><span>${g.done ? '✓ ' : ''}${esc(g.name)}</span>
+        <span class="dim">${g.done ? '達成' : `${fmtNum(Math.min(g.cur, g.goal))}/${fmtNum(g.goal)}`}</span></div>
+        <div class="bar goalbar"><i style="width:${pct}%"></i></div>
+        <div class="goal-rw">${g.done ? '<span class="dim">報酬を受け取った</span>' : `報酬 ${gg}G・${gm}💎`}</div></div>`;
+    };
+    $('goalCard').innerHTML = `<div class="card-h"><span>今週の目標</span><span class="dim">月曜に更新</span></div>${c.goals.week.map(g => row(g, 'week')).join('')}
+      <div class="card-h mt12"><span>今月の目標</span></div>${c.goals.month.map(g => row(g, 'month')).join('')}`;
+  }
+
+  // ---------- 昨日の記録（週に2回まで） ----------
+  const RETRO_MAX = 2;
+  function retroLeft() {
+    const t = todayKey(), ws = weekStart(t);
+    if (state.retro.some(r => r.k === t)) return { left: RETRO_MAX - state.retro.filter(r => weekStart(r.k) === ws).length, usedToday: true };
+    return { left: RETRO_MAX - state.retro.filter(r => weekStart(r.k) === ws).length, usedToday: false };
+  }
+  function openRetro() {
+    SFX.tap();
+    const y = addDays(todayKey(), -1);
+    if (y < state.start) { toast('昨日はまだ冒険を始めていません'); return; }
+    const ids = (state.sched[y] || currentIdsFor(y)).filter(id => state.tasks.some(t => t.id === id));
+    const r = retroLeft();
+    const can = r.usedToday || r.left > 0;
+    const e = state.log[y] || {};
+    openSheet(`昨日（${md(y)}）の記録`, `<div class="dim">記録し忘れた分を追加・修正できます。${r.usedToday ? '今日はもう使っているので、続けて修正できます。' : `今週はあと<span class="y">${Math.max(0, r.left)}回</span>使えます（週に${RETRO_MAX}回まで）。`}</div>
+      ${ids.map(id => {
+        const t = state.tasks.find(x => x.id === id), v = e[id], done = isDone(t, v);
+        let ctl = '';
+        if (t.type === 'check' || t.type === 'bed') ctl = `<button class="btn sm ${done ? 'green' : ''}" data-r="toggle" data-id="${id}" ${can ? '' : 'disabled'}>${done ? '✓ クリア' : 'やった'}</button>`;
+        else if (t.type === 'count') ctl = `<input type="number" inputmode="decimal" min="0" step="any" class="rinput" data-r="count" data-id="${id}" value="${v ?? ''}" placeholder="0" ${can ? '' : 'disabled'}><span class="dim">/${fmt(t.target)}${esc(t.unit)}</span>`;
+        else ctl = `<input type="time" class="rinput" data-r="wake" data-id="${id}" value="${v ?? ''}" ${can ? '' : 'disabled'}>`;
+        return `<div class="list-row"><div class="ic">${iconHtml(t.icon, 22)}</div><div class="grow">${esc(taskName(t))}</div>${ctl}</div>`;
+      }).join('') || '<div class="dim">昨日のクエストはありません</div>'}
+      ${can ? '' : '<div class="r center mt8">今週はもう使えません</div>'}`, body => {
+      const apply = (id, v) => {
+        if (!retroLeft().usedToday) state.retro.push({ k: todayKey(), day: y });
+        setEntry(id, v, y);
+        openRetro();
+      };
+      body.onclick = ev => { const b = ev.target.closest('[data-r=toggle]'); if (b && !b.disabled) apply(b.dataset.id, !(state.log[y] || {})[b.dataset.id]); };
+      body.onchange = ev => {
+        const el = ev.target; if (!el.dataset.r) return;
+        if (el.dataset.r === 'count') apply(el.dataset.id, el.value === '' ? null : Math.max(0, Number(el.value)));
+        if (el.dataset.r === 'wake') apply(el.dataset.id, el.value || null);
+      };
+    });
+  }
+  $('retroBtn').addEventListener('click', openRetro);
+
+  // ---------- ペット（ステータス画面） ----------
+  function renderPet(c) {
+    const card = $('petCard');
+    if (!c.petUnlock) {
+      card.innerHTML = `<div class="card-h"><span>ペット</span></div>
+        <div class="pet-row">${P.svg('slime', 64, null, { silhouette: true })}<div class="grow"><div>？？？</div><div class="dim">Lv${P.UNLOCK_LV}で仲間になる</div></div></div>`;
+      return;
+    }
+    const id = c.pet, p = P.PETS[id], L = P.levelOf(c.petExp[id] || 0);
+    card.innerHTML = `<div class="card-h"><span>ペット</span><span class="dim">${ownedPets(todayKey(), c.petUnlock).length}/${Object.keys(P.PETS).length}匹</span></div>
+      <div class="pet-row"><div class="pet-pic">${P.svg(id, 72, petGearOn(todayKey()))}</div>
+        <div class="grow"><div><span class="rare r${p.rarity}">${stars(p.rarity)}</span> ${p.name} <span class="y">Lv${L.lv}</span></div>
+          <div class="dim">${p.type}型・${p.desc}</div>
+          <div class="bar petbar"><i style="width:${L.max ? 100 : L.rest / L.need * 100}%"></i></div>
+          <div class="dim">${L.max ? 'レベル最大' : `次のレベルまで ${L.need - L.rest}`}</div></div></div>
+      <div class="pet-fx">${P.fxText(c.petFx)}</div>
+      <div class="row mt8"><button class="btn sm" id="feedBtn">餌をあげる</button><button class="btn sm blue" id="petListBtn">ペット変更</button><button class="btn sm blue" id="petGearBtn">ペット装備</button></div>`;
+    $('feedBtn').onclick = openFeed;
+    $('petListBtn').onclick = openPetList;
+    $('petGearBtn').onclick = openPetGear;
+  }
+  function openFeed() {
+    SFX.tap();
+    const id = C.pet, L = P.levelOf(C.petExp[id] || 0);
+    openSheet(`${P.PETS[id].name}に餌をあげる`, `<div class="center">${P.svg(id, 72, petGearOn(todayKey()))}<div>Lv${L.lv}　${L.max ? 'レベル最大' : `次まで ${L.need - L.rest}`}</div></div>
+      ${Object.entries(P.FOODS).map(([fid, f]) => `<div class="list-row"><div class="item-ic">${S.icon(f.icon, 30)}</div>
+        <div class="grow">${f.name} <span class="y">×${foodCount(fid)}</span><div class="dim">経験値+${f.exp}</div></div>
+        <button class="btn sm" data-feed="${fid}" ${!foodCount(fid) || L.max ? 'disabled' : ''}>あげる</button></div>`).join('')}
+      <div class="dim center mt8">餌はレベルアップ報酬・ショップ・ペットガチャで手に入る。連れているペットは、クエストでも経験値がたまる</div>`, body => {
+      body.onclick = e => {
+        const b = e.target.closest('[data-feed]'); if (!b || b.disabled) return;
+        const before = P.levelOf(C.petExp[id] || 0).lv;
+        state.feeds.push({ k: todayKey(), pet: id, food: b.dataset.feed }); save(); render();
+        const after = P.levelOf(C.petExp[id] || 0).lv;
+        if (after > before) { say(`${P.PETS[id].name}のレベルが${after}に上がった！`); SFX.level(); flash(); } else { say(`${P.PETS[id].name}は${P.FOODS[b.dataset.feed].name}を食べた！`); SFX.done(); }
+        openFeed();
+      };
+    });
+  }
+  function openPetList() {
+    SFX.tap();
+    const own = ownedPets(todayKey(), C.petUnlock);
+    openSheet('ペット変更', Object.entries(P.PETS).map(([id, p]) => {
+      const has = own.includes(id), cur = C.pet === id, lv = P.levelOf(C.petExp[id] || 0).lv;
+      return `<div class="list-row"><div class="item-ic">${P.svg(id, 36, null, { silhouette: !has })}</div>
+        <div class="grow">${has ? `<span class="rare r${p.rarity}">${stars(p.rarity)}</span> ${p.name} <span class="y">Lv${lv}</span><div class="dim">${P.fxText(P.stats(id, lv, petGearOn(todayKey())))}</div>` : `？？？<div class="dim">${p.rarity === 3 ? '' : 'ペットガチャで出会える'}</div>`}</div>
+        ${cur ? '<span class="state-label on">連れている</span>' : has ? `<button class="btn sm blue" data-pet="${id}">連れていく</button>` : ''}</div>`;
+    }).join(''), body => {
+      body.onclick = e => {
+        const b = e.target.closest('[data-pet]'); if (!b) return;
+        const t = todayKey();
+        state.petLog = state.petLog.filter(x => x.k !== t); state.petLog.push({ k: t, id: b.dataset.pet });
+        save(); render(); say(`${P.PETS[b.dataset.pet].name}を連れていくことにした！`); SFX.done(); openPetList();
+      };
+    });
+  }
+  function openPetGear() {
+    SFX.tap();
+    const cur = petGearOn(todayKey()), own = petGearOwned();
+    openSheet('ペット装備', Object.entries(P.GEAR_SLOTS).map(([slot, sn]) => `<div class="card-h mt8"><span>${sn}</span></div>` +
+      (Object.entries(P.GEAR).filter(([, g]) => g.slot === slot).map(([gid, g]) => {
+        const has = own.includes(gid), worn = cur[slot] === gid;
+        return `<div class="list-row"><div class="item-ic">${P.gearSvg(gid, 30)}</div>
+          <div class="grow">${has ? g.name : '？？？'}<div class="dim">${has ? P.fxText(Object.assign({}, g.fx)) : 'ペットガチャで手に入る'}</div></div>
+          ${worn ? `<button class="btn sm gray" data-unequip="${slot}">外す</button>` : has ? `<button class="btn sm blue" data-pgear="${gid}">装備する</button>` : ''}</div>`;
+      }).join(''))).join(''), body => {
+      body.onclick = e => {
+        const b = e.target.closest('[data-pgear],[data-unequip]'); if (!b) return;
+        const t = todayKey();
+        const slot = b.dataset.unequip || P.GEAR[b.dataset.pgear].slot;
+        state.petGearLog = state.petGearLog.filter(x => !(x.k === t && x.slot === slot));
+        state.petGearLog.push({ k: t, slot, id: b.dataset.pgear || null });
+        save(); render(); SFX.done(); openPetGear();
+      };
+    });
+  }
+
+  // ---------- ペットガチャ ----------
+  function petPityCount() {
+    let n = 0;
+    const list = state.pulls.filter(p => p.gacha === 'pet');
+    for (let i = list.length - 1; i >= 0; i--) { if (list[i].type === 'pet' || list[i].pet) break; n++; }
+    return n;
+  }
+  function rollPet() {
+    const T = P.GACHA.table;
+    let kind;
+    if (petPityCount() + 1 >= P.GACHA.pity) kind = Math.random() < 0.25 ? ['pet5'] : ['pet4'];
+    else {
+      let y = Math.random() * T.reduce((a, t) => a + t[2], 0);
+      kind = T.find(t => (y -= t[2]) < 0) || T[T.length - 1];
+    }
+    const base = { k: todayKey(), gacha: 'pet' };
+    if (kind[0] === 'pet5' || kind[0] === 'pet4') {
+      const r = kind[0] === 'pet5' ? 5 : 4;
+      const pool = Object.keys(P.PETS).filter(id => P.PETS[id].rarity === r);
+      const id = pool[Math.floor(Math.random() * pool.length)];
+      const has = ownedPets(todayKey(), C.petUnlock).includes(id);
+      if (has) return { ...base, r, type: 'food', id: P.GACHA.dup.pet[0], n: P.GACHA.dup.pet[1], pet: id, dupPet: id };
+      return { ...base, r, type: 'pet', id };
+    }
+    if (kind[0] === 'gear') {
+      const ids = Object.keys(P.GEAR), id = ids[Math.floor(Math.random() * ids.length)];
+      if (petGearOwned().includes(id)) return { ...base, r: 3, type: 'food', id: P.GACHA.dup.gear[0], n: P.GACHA.dup.gear[1], dupGear: id };
+      return { ...base, r: 3, type: 'petgear', id };
+    }
+    return { ...base, r: 2, type: 'food', id: kind[1], n: 1 };
+  }
+  function pullPet(n, cur) {
+    const cost = cur === 'gold' ? (n === 10 ? P.GACHA.gold10 : P.GACHA.gold1) : (n === 10 ? P.GACHA.gem10 : P.GACHA.gem1);
+    if ((cur === 'gold' ? C.gold : C.gems) < cost) { toast(cur === 'gold' ? 'ゴールドが足りません' : 'ジェムが足りません'); return; }
+    const res = [];
+    for (let i = 0; i < n; i++) { const p = rollPet(); state.pulls.push(p); res.push(p); }
+    state.petGachaLog.push({ k: todayKey(), n, cur, cost });
+    save();
+    showGachaResult(res);
+    render();
   }
 
   // ---------- 持ち物 ----------
@@ -939,8 +1276,8 @@
   $('lookBtn').addEventListener('click', () => { SFX.tap(); openLook(); });
 
   // ---------- 記録 ----------
-  function setEntry(id, v) {
-    const k = todayKey();
+  function setEntry(id, v, day) {
+    const k = day || todayKey(), isToday = k === todayKey();
     const t = state.tasks.find(x => x.id === id);
     const before = C || compute();
     const wasDone = isDone(t, (state.log[k] || {})[id]);
@@ -951,10 +1288,15 @@
     const after = compute();
     const diff = after.total - before.total;
     const bd = (after.perDay[k]?.bossDmg || 0) - (before.perDay[k]?.bossDmg || 0);
+    const pd = (after.perDay[k]?.petDmg || 0) - (before.perDay[k]?.petDmg || 0);
     const gd = after.earned - before.earned;
     const nowDone = isDone(t, (state.log[k] || {})[id]);
     const name = esc(state.name), bossName = after.boss.name;
     const killed = after.bossWins > before.bossWins;
+    if (!isToday) {
+      say(`昨日（${md(k)}）の記録を更新した。${killed ? `<br>${bossName}を倒した！` : ''}`); SFX.done();
+      render(); return;
+    }
     const critHit = nowDone && !wasDone && isCrit(k, id, after.gearStats.crit);
     if (killed) {
       say(`${name}の攻撃！<br>${bossName}を倒した！ ＋${after.boss.reward}EXP ＋${after.boss.gold}G`); SFX.boss(); vibrate([100, 50, 300]); flash();
@@ -969,7 +1311,7 @@
       say(`${bossName}に<span class="r">${bd}</span>のダメージ！`); SFX.hit(); vibrate(20);
     } else if (diff < 0) SFX.undo();
     render();
-    if (bd > 0) playAttack(bd, { crit: critHit, killed });
+    if (bd > 0) playAttack(bd, { crit: critHit, killed, pet: pd });
   }
 
   $('taskList').addEventListener('click', e => {
@@ -1026,6 +1368,7 @@
     ['✎', '名前の変更', () => openName()],
     ['👤', '見た目の変更', () => openLook()],
     ['♪', 'サウンド・振動', () => openSound()],
+    ['Ａ', '文字の大きさ', () => openFont()],
     ['⏰', '通知', () => openReminder()],
     ['📦', 'バックアップ・復元', () => openBackup()],
     ['📲', 'インストール', () => openInstall()],
@@ -1039,6 +1382,14 @@
   function openName() {
     openSheet('名前の変更', `<input id="nm" maxlength="12" value="${esc(state.name)}"><div class="row mt12"><button class="btn" id="nmOk">保存</button></div>`, body => {
       body.querySelector('#nmOk').onclick = () => { state.name = body.querySelector('#nm').value.trim() || '冒険者'; save(); closeSheet(); render(); };
+    });
+  }
+  const FONT_SCALES = [[1, '標準'], [1.1, '大'], [1.2, '特大']];
+  const applyFont = () => { document.body.style.zoom = state.fontScale || 1; };
+  function openFont() {
+    openSheet('文字の大きさ', `<div class="seg">${FONT_SCALES.map(([v, n]) => `<button class="btn ${state.fontScale === v ? 'on' : ''}" data-fs="${v}">${n}</button>`).join('')}</div>
+      <div class="dim mt12">画面全体が大きくなります</div>`, body => {
+      body.onclick = e => { const b = e.target.closest('[data-fs]'); if (!b) return; state.fontScale = Number(b.dataset.fs); save(); applyFont(); SFX.tap(); openFont(); };
     });
   }
   function openSound() {
@@ -1467,6 +1818,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { render(); checkNotify(); } });
 
   state.lastLevel = state.lastLevel || levelOf(compute().total).lv;
+  applyFont();
   save();
   render();
   checkNotify();
