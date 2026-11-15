@@ -31,6 +31,7 @@
       <div class="meter hp"><i id="hpBar"></i><span id="hpTxt">HP 100</span></div>
     </div>
     <div class="top-btns">
+      <button class="ibtn" id="bagBtn" aria-label="持ち物"><span id="bagIcon"></span></button>
       <button class="ibtn" id="mailBtn" aria-label="お知らせ"><span id="mailIcon"></span><span class="badge hidden" id="mailBadge">0</span></button>
       <button class="ibtn" id="helpBtn" aria-label="ルール">？</button>
     </div>
@@ -39,7 +40,8 @@
     <span class="pill">🔥連続<b id="streakNum">0</b>日</span>
     <span class="pill ice">❄<b id="freezeNum">0</b></span>
     <span class="pill gold">EXP×<b id="multNum">1.00</b></span>
-    <span class="pill coin"><span id="coinIcon"></span><b id="goldNum">0</b>G</span>
+    <span class="pill coin"><span id="coinIcon"></span><b id="goldNum">0</b></span>
+    <span class="pill gemp"><span id="gemIcon"></span><b id="gemNum">0</b></span>
   </div>
 </header>
 
@@ -59,7 +61,7 @@
     <div class="card">
       <div class="hero-big"><div id="heroBig"></div>
         <div class="grow"><div class="name" id="heroName2"></div><div class="dim" id="titleTxt"></div>
-          <div class="row mt8" style="gap:8px"><button class="btn sm blue" id="titlesBtn">称号一覧</button><button class="btn sm blue" id="achBtn">実績</button></div></div></div>
+          <div class="row mt8" style="gap:8px"><button class="btn sm blue" id="titlesBtn">称号一覧</button><button class="btn sm blue" id="achBtn">実績</button><button class="btn sm blue" id="lookBtn">見た目</button></div></div></div>
       <div class="card-h mt12"><span>装備</span><button class="btn sm" id="equipBtn">装備を変更</button></div>
       <div id="equipList"></div>
     </div>
@@ -70,9 +72,10 @@
   <!-- ショップ -->
   <section id="tab-shop" class="hidden">
     <div class="card shop-top"><div id="shopHero"></div>
-      <div class="grow"><div class="dim">所持ゴールド</div><div class="gold-big"><b id="shopGold">0</b>G</div>
+      <div class="grow"><div class="gold-big"><span id="coinIcon2"></span><b id="shopGold">0</b>G</div>
+        <div class="gem-big"><span id="gemIcon2"></span><b id="shopGems">0</b></div>
         <div class="shop-stats" id="shopStats"></div><div class="mt8" id="tryNote"></div></div></div>
-    <div class="seg wrap-seg" id="shopSlots"></div>
+    <div class="seg" id="shopTabs"></div>
     <div id="shopList"></div>
   </section>
 
@@ -114,6 +117,7 @@
 </div></div>
 
 <div class="say hidden" id="say"></div>
+<div class="gacha hidden" id="gacha"><div class="gacha-in" id="gachaBox"></div></div>
 <div class="flash hidden" id="flash"></div>
 <div class="ob hidden" id="ob"><div class="ob-in" id="obBox"></div></div>
 <input type="file" id="importFile" accept="application/json,.json" class="hidden">

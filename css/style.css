@@ -244,3 +244,61 @@ label.lb { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4p
 .ach .ai { width: 24px; text-align: center; }
 .ach:not(.got) { color: #b8b8d8; }
 .dex .dim { font-size: 9px; }
+
+/* ジェム・持ち物・見た目 */
+.pills { gap: 6px; font-size: 12px; }
+.pill { padding: 1px 8px; }
+.pill.gemp { color: #f6b0ff; display: inline-flex; align-items: center; gap: 3px; }
+.pill.gemp b { font-weight: 400; }
+.top-btns { gap: 8px; }
+.ibtn { width: 40px; height: 40px; }
+.gem-big { font-size: 20px; color: #f6b0ff; display: flex; align-items: center; gap: 4px; }
+.gold-big { display: flex; align-items: center; gap: 4px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.sw { width: 38px; height: 38px; border-radius: 8px; border: 3px solid #000; box-shadow: 0 3px 0 #000; cursor: pointer; }
+.sw.on { outline: 3px solid var(--y); }
+.chip-fx { display: inline-block; font-size: 11px; background: #ffffff14; border-radius: 4px; padding: 0 6px; margin: 4px 4px 0 0; }
+.burn { color: #ff9a2e; } .pois { color: #7af07a; }
+.small { font-size: 12px; }
+.setname { font-size: 11px; }
+
+/* レア度 */
+.rare { font-size: 11px; }
+.rare.r5, .g-card.r5 .g-st { color: #ffd84a; text-shadow: 0 0 6px #ffb000; }
+.rare.r4, .g-card.r4 .g-st { color: #d08aff; }
+.rare.r3, .g-card.r3 .g-st { color: #8fd3ff; }
+.item-ic.r5 { background: radial-gradient(circle, #6a4a00, #000); box-shadow: inset 0 0 0 2px #ffd84a; }
+.item-ic.r4 { background: radial-gradient(circle, #3a1a5a, #000); box-shadow: inset 0 0 0 2px #b07af0; }
+.card.item.locked .item-ic svg { filter: brightness(.55); }
+
+/* ガチャ */
+.gacha-banner { background: linear-gradient(180deg, #2a1a5a, #12123a); border-color: #ffd84a; }
+.gb-title { text-align: center; color: #ffd84a; font-size: 18px; text-shadow: 0 0 8px #ffb000; letter-spacing: .1em; }
+.gb-heroes { display: flex; justify-content: space-around; text-align: center; margin: 8px 0; }
+.gacha { position: fixed; inset: 0; z-index: 65; background: #000d; display: grid; place-items: center; padding: 16px; }
+.gacha-in { width: 100%; max-width: 420px; max-height: 90vh; overflow: auto; text-align: center; }
+.g-chest { display: inline-block; animation: shake .5s steps(2) infinite; filter: drop-shadow(0 0 12px #fff8); }
+.gacha.best4 .g-chest { filter: drop-shadow(0 0 16px #b07af0); }
+.gacha.best5 .g-chest { filter: drop-shadow(0 0 20px #ffd84a); animation-duration: .25s; }
+.gacha.open .g-chest { animation: burst .5s forwards; }
+@keyframes shake { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes burst { to { transform: scale(2.2); opacity: 0; } }
+.g-title { font-size: 20px; margin-bottom: 12px; color: #fff; }
+.gacha.best5 .g-title { color: #ffd84a; text-shadow: 0 0 10px #ffb000; animation: rainbow 1.5s linear infinite; }
+@keyframes rainbow { 0% { color: #ffd84a; } 33% { color: #ff7ad9; } 66% { color: #4fe3ff; } 100% { color: #ffd84a; } }
+.g-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.g-grid.one { grid-template-columns: 1fr; max-width: 180px; margin: 0 auto; }
+.g-card { background: var(--card); border: 2px solid #ffffff33; border-radius: 8px; padding: 6px 2px; animation: cardin .35s steps(4) both; position: relative; }
+.g-card.r4 { border-color: #b07af0; background: linear-gradient(180deg, #3a1a5a, #12123a); }
+.g-card.r5 { border-color: #ffd84a; background: linear-gradient(180deg, #6a4a00, #12123a); box-shadow: 0 0 12px #ffb000; }
+@keyframes cardin { from { transform: scale(.3) rotateY(90deg); opacity: 0; } }
+.g-ic { display: grid; place-items: center; min-height: 44px; }
+.g-st { font-size: 9px; }
+.g-nm { font-size: 10px; line-height: 1.2; min-height: 2.4em; }
+.g-new { font-size: 9px; color: #241a00; background: var(--y); border-radius: 3px; margin: 2px 4px 0; }
+.g-dup { font-size: 9px; color: #f6b0ff; }
+
+/* オーラ（セット6部位） */
+.hero-sprite.aura-fire { filter: drop-shadow(0 0 4px #ff7a3a); }
+.hero-sprite.aura-dark { filter: drop-shadow(0 0 4px #b07af0); }
+.hero-sprite.aura-ice { filter: drop-shadow(0 0 4px #4fe3ff); }
