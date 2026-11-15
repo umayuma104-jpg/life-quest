@@ -220,3 +220,19 @@ label.lb { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4p
 .pick-row { justify-content: flex-start; text-align: left; margin-top: 8px; min-height: 52px; }
 .pick-row small { font-size: 11px; }
 .pick-row .arrow { color: var(--y); }
+
+/* ゴールド・装備・ショップ */
+.pill.coin { color: var(--y); display: inline-flex; align-items: center; gap: 3px; margin-left: auto; }
+.pill.coin b { font-weight: 400; }
+.gear-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+.gear-row .gs { width: 56px; }
+.gear-sum { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; }
+.card-h .btn { color: #241a00; }
+.shop-top { display: flex; gap: 14px; align-items: center; }
+.gold-big { font-size: 26px; color: var(--y); }
+.gold-big b { font-weight: 400; }
+.shop-stats { font-size: 12px; line-height: 1.6; margin-top: 4px; }
+.card.item { display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 10px; cursor: pointer; border-color: #ffffff33; }
+.card.item.trying { border-color: var(--y); background: var(--card2); }
+.item-ic { width: 48px; height: 48px; display: grid; place-items: center; background: #000; border-radius: 6px; flex-shrink: 0; }
+.tabs button { font-size: 10px; }

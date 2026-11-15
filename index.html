@@ -39,6 +39,7 @@
     <span class="pill">🔥連続<b id="streakNum">0</b>日</span>
     <span class="pill ice">❄<b id="freezeNum">0</b></span>
     <span class="pill gold">EXP×<b id="multNum">1.00</b></span>
+    <span class="pill coin"><span id="coinIcon"></span><b id="goldNum">0</b>G</span>
   </div>
 </header>
 
@@ -59,11 +60,20 @@
       <div class="hero-big"><div id="heroBig"></div>
         <div class="grow"><div class="name" id="heroName2"></div><div class="dim" id="titleTxt"></div>
           <button class="btn sm blue mt8" id="titlesBtn">称号一覧</button></div></div>
-      <div class="card-h mt12"><span>装備</span></div>
+      <div class="card-h mt12"><span>装備</span><button class="btn sm" id="equipBtn">装備を変更</button></div>
       <div id="equipList"></div>
     </div>
     <div class="card"><div class="card-h"><span>能力</span></div><div id="statList"></div></div>
     <div class="card"><div class="kpis" id="kpis"></div></div>
+  </section>
+
+  <!-- ショップ -->
+  <section id="tab-shop" class="hidden">
+    <div class="card shop-top"><div id="shopHero"></div>
+      <div class="grow"><div class="dim">所持ゴールド</div><div class="gold-big"><b id="shopGold">0</b>G</div>
+        <div class="shop-stats" id="shopStats"></div><div class="mt8" id="tryNote"></div></div></div>
+    <div class="seg wrap-seg" id="shopSlots"></div>
+    <div id="shopList"></div>
   </section>
 
   <!-- 記録 -->
@@ -82,6 +92,7 @@
 <nav class="tabs"><div class="in">
   <button data-tab="today" class="on"><span class="ti" data-icon="sword"></span>クエスト</button>
   <button data-tab="stats"><span class="ti" data-icon="shield"></span>ステータス</button>
+  <button data-tab="shop"><span class="ti" data-icon="coin"></span>ショップ</button>
   <button data-tab="log"><span class="ti" data-icon="book"></span>記録</button>
   <button data-tab="menu"><span class="ti" data-icon="gear"></span>メニュー</button>
 </div></nav>
@@ -109,6 +120,7 @@
 
 <script src="js/sprites.js"></script>
 <script src="js/catalog.js"></script>
+<script src="js/gear.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
