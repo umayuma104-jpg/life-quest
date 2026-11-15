@@ -12,7 +12,7 @@ PWA に対応しているので、HTTPS で公開するとスマホのホーム�
 
 1. このブランチを `main` にマージする
 2. GitHub のリポジトリ → **Settings → Pages** → Source を「Deploy from a branch」、Branch を `main` / `/ (root)` にして保存
-3. 数分後に `https://<ユーザー名>.github.io/fitness-app/` で公開される
+3. 数分後に `https://<ユーザー名>.github.io/life-quest/` で公開される
 4. スマホでそのURLを開いて
    - **iPhone**: Safari の共有ボタン →「ホーム画面に追加」
    - **Android**: Chrome の「アプリをインストール」、またはアプリ内 設定タブの「📲 ホーム画面に追加」
