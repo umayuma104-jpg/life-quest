@@ -310,3 +310,51 @@ label.lb { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4p
 .rule-sec { margin-bottom: 12px; }
 .rule-h { color: var(--y); font-size: 14px; margin-bottom: 2px; }
 .rules { margin: 0; }
+
+/* ---------- 戦闘画面 ---------- */
+.stage-card { padding: 10px 12px 0; overflow: hidden; }
+.st-head { display: flex; justify-content: space-between; gap: 8px; }
+.st-sub { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dim); }
+.stage { position: relative; height: 128px; margin: 8px -12px 0; overflow: hidden; image-rendering: pixelated; }
+.st-grass .stage { background: linear-gradient(#2a4a8a 0 55%, #3a6aaa 55% 70%, #2f6a34 70%); }
+.st-cave .stage { background: linear-gradient(#1a1420 0 30%, #2a2030 30% 70%, #3a3040 70%); }
+.st-night .stage { background: radial-gradient(circle at 80% 22%, #fff6c0 0 6px, transparent 7px), linear-gradient(#0a0a2a 0 70%, #1a2a3a 70%); }
+.st-castle .stage { background: repeating-linear-gradient(90deg, #3a2a4a 0 22px, #4a3a5a 22px 24px), linear-gradient(#3a2a4a, #3a2a4a); }
+.st-castle .stage::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: #5a2a2a; }
+.st-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 30%;
+  background: repeating-linear-gradient(90deg, #00000022 0 4px, transparent 4px 12px); }
+.st-hero { position: absolute; left: 14%; bottom: 14px; z-index: 2; animation: bob 1.2s steps(2) infinite; }
+.st-boss { position: absolute; right: 12%; bottom: 18px; z-index: 2; animation: bob 1.6s steps(2) infinite reverse; }
+.st-boss svg { transform: scaleX(-1); }
+@keyframes bob { 50% { transform: translateY(-3px); } }
+.st-hero.atk { animation: lunge .45s steps(5); }
+@keyframes lunge { 0% { transform: none; } 40% { transform: translateX(120%) translateY(-6px); } 60% { transform: translateX(120%); } 100% { transform: none; } }
+.st-boss.hit { animation: bosshit .45s steps(3); }
+@keyframes bosshit { 0%,100% { transform: none; filter: none; } 30% { transform: translateX(8px); filter: brightness(4); } 60% { transform: translateX(-4px); } }
+.stage-card.dead .st-boss, .st-boss.dying { animation: none; }
+.stage-card.dead .st-boss { opacity: .35; filter: grayscale(1); transform: rotate(90deg) translateX(18px); }
+.st-boss.dying { animation: fall .9s steps(6) forwards; }
+@keyframes fall { 0% { filter: brightness(4); } 50% { transform: rotate(45deg); opacity: .8; } 100% { transform: rotate(90deg) translateX(18px); opacity: .35; filter: grayscale(1); } }
+.st-slash { position: absolute; right: 16%; bottom: 40px; width: 64px; height: 64px; z-index: 3; pointer-events: none;
+  background: linear-gradient(135deg, transparent 44%, #fff 45% 52%, transparent 53%); animation: slash .35s steps(3) forwards; }
+.st-slash.crit { background: linear-gradient(135deg, transparent 40%, #ffef5a 41% 56%, transparent 57%), linear-gradient(45deg, transparent 44%, #fff 45% 52%, transparent 53%); width: 84px; height: 84px; }
+@keyframes slash { from { opacity: 1; transform: scale(.6); } to { opacity: 0; transform: scale(1.3); } }
+.st-dmg { position: absolute; right: 18%; bottom: 84px; z-index: 4; font-size: 22px; color: #fff; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000; animation: dmg 1.1s steps(8) forwards; pointer-events: none; text-align: center; line-height: 1; }
+.st-dmg small { display: block; font-size: 12px; color: var(--y); }
+.st-dmg.crit { font-size: 30px; color: var(--y); }
+.st-dmg.bomb { color: #ff9a2e; font-size: 28px; }
+@keyframes dmg { 0% { transform: translateY(10px) scale(.6); opacity: 0; } 20% { transform: translateY(0) scale(1.2); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-30px); opacity: 0; } }
+.st-boom { position: absolute; right: 10%; bottom: 10px; width: 100px; height: 100px; z-index: 3; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 15%, #ffef5a 16% 35%, #ff9a2e 36% 55%, #e5534b 56% 70%, transparent 71%); animation: boom .6s steps(5) forwards; }
+@keyframes boom { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+.stage.quake { animation: quake .4s steps(4); }
+@keyframes quake { 25% { transform: translate(-4px, 2px); } 50% { transform: translate(4px, -2px); } 75% { transform: translate(-2px, 0); } }
+.st-win { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); z-index: 5; color: var(--y); font-size: 22px; text-shadow: 2px 2px 0 #000; letter-spacing: .2em; animation: pop .4s steps(4); }
+
+/* ---------- チュートリアル ---------- */
+.tut { position: fixed; inset: 0; z-index: 90; }
+.tut-hole { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px #000000c8; outline: 3px solid var(--y); transition: all .25s; animation: tutpulse 1.2s steps(2) infinite; pointer-events: none; }
+@keyframes tutpulse { 50% { outline-color: #fff; } }
+.tut-box { position: fixed; left: 12px; right: 12px; max-width: 520px; margin: 0 auto; background: var(--card); border: 3px double var(--frame); border-radius: 10px; padding: 12px 14px; }
+.tut-step { font-size: 11px; color: var(--dim); }
+.tut-text { line-height: 1.7; margin-top: 4px; }

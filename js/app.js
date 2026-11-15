@@ -483,18 +483,48 @@
     if (added) { save(); renderBadge(); setTimeout(() => { toast(`📬 お知らせが${added}件あります`); SFX.mail(); }, 400); }
   }
 
+  // ---------- 戦闘画面（主人公とボスが向き合う） ----------
+  const STAGES = ['grass', 'cave', 'night', 'castle'];
   function renderBoss(c) {
     const b = c.boss, t = todayKey();
     const left = Math.max(0, b.hp - b.dmg);
     const daysLeft = 6 - ((dow(t) + 6) % 7);
-    $('bossCard').classList.toggle('dead', !!b.defeated);
-    $('bossCard').innerHTML = `<div id="bossPic">${S.boss(b.idx, 52)}</div>
-      <div class="grow">
-        <div style="display:flex;justify-content:space-between;gap:8px"><span><span class="dim">${b.n + 1}体目</span> ${b.name}</span><span class="dim">${b.defeated ? '<span class="y">討伐済み</span>' : daysLeft ? `残り${daysLeft}日` : '今日まで'}</span></div>
-        <div class="bar boss"><i style="width:${left / b.hp * 100}%"></i></div>
-        ${!b.defeated && (c.gearStats.burn || c.gearStats.poison) ? `<div class="small">${c.gearStats.burn ? `<span class="burn">🔥火傷 毎日−${Math.round(b.hp * c.gearStats.burn / 100)}</span> ` : ''}${c.gearStats.poison ? `<span class="pois">☠毒 ${c.poison}段階</span>` : ''}</div>` : ''}
-        <div class="dim">${b.defeated ? `報酬 ＋${b.reward}EXP ＋${b.gold}G 獲得` : `HP ${left}/${b.hp} ・ 報酬 ${b.reward}EXP ${b.gold}G`}</div>
+    const gs = c.gearStats;
+    $('bossCard').className = `card stage-card st-${STAGES[b.n % STAGES.length]} ${b.defeated ? 'dead' : ''}`;
+    $('bossCard').innerHTML = `
+      <div class="st-head"><span><span class="dim">${b.n + 1}体目</span> ${b.name}</span><span class="dim">${b.defeated ? '<span class="y">討伐済み</span>' : daysLeft ? `残り${daysLeft}日` : '今日まで'}</span></div>
+      <div class="bar boss"><i style="width:${left / b.hp * 100}%"></i></div>
+      <div class="st-sub"><span>HP ${left}/${b.hp}</span>
+        <span>${!b.defeated && gs.burn ? `<span class="burn">🔥毎日−${Math.round(b.hp * gs.burn / 100)}</span> ` : ''}${!b.defeated && gs.poison ? `<span class="pois">☠毒${c.poison}</span> ` : ''}報酬 ${b.reward}EXP ${b.gold}G</span></div>
+      <div class="stage" id="stage">
+        <div class="st-hero">${heroSvg(60)}</div>
+        <div class="st-boss" id="bossPic">${S.boss(b.idx, 76)}</div>
+        <div class="st-ground"></div>
+        ${b.defeated ? '<div class="st-win">討伐！</div>' : ''}
       </div>`;
+  }
+  // 攻撃の演出：主人公が踏み込み → 斬撃 → ボスがよろめく → ダメージの数字
+  function playAttack(dmg, opts = {}) {
+    const st = $('stage'); if (!st || dmg <= 0) return;
+    const hero = st.querySelector('.st-hero'), boss = st.querySelector('.st-boss');
+    const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    if (opts.bomb) {
+      const fx = document.createElement('div'); fx.className = 'st-boom'; st.appendChild(fx);
+      setTimeout(() => fx.remove(), 700);
+    } else restart(hero, 'atk');
+    setTimeout(() => {
+      if (!opts.bomb) { const sl = document.createElement('div'); sl.className = 'st-slash' + (opts.crit ? ' crit' : ''); st.appendChild(sl); setTimeout(() => sl.remove(), 400); }
+      restart(boss, 'hit');
+      const n = document.createElement('div');
+      n.className = 'st-dmg' + (opts.crit ? ' crit' : '') + (opts.bomb ? ' bomb' : '');
+      n.innerHTML = (opts.crit ? '<small>会心！</small>' : '') + dmg;
+      st.appendChild(n); setTimeout(() => n.remove(), 1100);
+      if (opts.crit || opts.bomb) restart(st, 'quake');
+      if (opts.killed) {
+        restart(boss, 'dying');
+        setTimeout(() => { if (!st.querySelector('.st-win')) { const w = document.createElement('div'); w.className = 'st-win'; w.textContent = '討伐！'; st.appendChild(w); } }, 500);
+      }
+    }, opts.bomb ? 120 : 220);
   }
 
   function renderToday(c, L) {
@@ -870,9 +900,16 @@
         state.uses.push({ k: todayKey(), id }); save(); render();
         const msg = { potion: `HPが${Math.min(30, C.hp - before.hp)}回復した！`, bomb: `爆弾が炸裂！ ${C.boss.name}に${Math.round(C.boss.hp * 0.2)}のダメージ！`,
           xpbook: '今日のEXPが1.5倍になった！', charm: '❄氷のお守りを1個手に入れた！' }[id];
+        if (id === 'bomb') {
+          // 爆発が見えるようにクエスト画面へ
+          closeSheet(); showTab('today');
+          say(`${G.ITEMS[id].name}を使った！<br>${msg}`);
+          noise(0.4, 0.2); vibrate(200);
+          setTimeout(() => playAttack(Math.round(C.boss.hp * 0.2), { bomb: true, killed: C.bossWins > before.bossWins }), 150);
+          return;
+        }
         say(`${G.ITEMS[id].name}を使った！<br>${msg}`);
-        if (id === 'bomb') { noise(0.4, 0.2); flash(); vibrate(200); const p = document.querySelector('#bossPic svg'); if (p) { p.classList.remove('hit'); void p.offsetWidth; p.classList.add('hit'); } }
-        else SFX.freeze();
+        SFX.freeze();
         openBag();
       };
     });
@@ -917,7 +954,9 @@
     const gd = after.earned - before.earned;
     const nowDone = isDone(t, (state.log[k] || {})[id]);
     const name = esc(state.name), bossName = after.boss.name;
-    if (after.bossWins > before.bossWins) {
+    const killed = after.bossWins > before.bossWins;
+    const critHit = nowDone && !wasDone && isCrit(k, id, after.gearStats.crit);
+    if (killed) {
       say(`${name}の攻撃！<br>${bossName}を倒した！ ＋${after.boss.reward}EXP ＋${after.boss.gold}G`); SFX.boss(); vibrate([100, 50, 300]); flash();
     } else if (after.perDay[k]?.cleared && !before.perDay[k]?.cleared) {
       say(`今日のクエストを達成！<br>HP＋${HEAL}${after.freezes > before.freezes ? '・❄氷のお守りを手に入れた！' : ''}`);
@@ -930,7 +969,7 @@
       say(`${bossName}に<span class="r">${bd}</span>のダメージ！`); SFX.hit(); vibrate(20);
     } else if (diff < 0) SFX.undo();
     render();
-    if (diff > 0) { const p = document.querySelector('#bossPic svg'); if (p) { p.classList.remove('hit'); void p.offsetWidth; p.classList.add('hit'); } }
+    if (bd > 0) playAttack(bd, { crit: critHit, killed });
   }
 
   $('taskList').addEventListener('click', e => {
@@ -991,6 +1030,7 @@
     ['📦', 'バックアップ・復元', () => openBackup()],
     ['📲', 'インストール', () => openInstall()],
     ['？', 'ルール', () => openHelp()],
+    ['🎓', 'チュートリアル', () => startTutorial()],
     ['⚠', 'データを全て削除', () => openReset(), 'danger'],
   ];
   $('menuList').innerHTML = MENU.map(([ic, label, , cls], i) => `<button class="btn ${cls || ''}" data-menu="${i}"><span class="mi">${ic}</span>${label}<span class="arrow">▶</span></button>`).join('');
@@ -1259,7 +1299,51 @@
     render();
     say(when === today ? `${esc(state.name)}の冒険が始まった！` : '新しいクエストは明日から始まる！');
     SFX.clear(); flash();
+    if (!state.tutorialDone) setTimeout(startTutorial, 1200);
   }
+
+  // ---------- チュートリアル（画面の要所を光らせて順番に説明） ----------
+  const TUT = [
+    ['#bossCard', '毎週、ボスが現れる。クエストをこなすと、主人公がボスに攻撃する。'],
+    ['#taskList .task', 'クエストをやったら、右のボタンを押して記録しよう。回数のクエストは「＋」で少しずつ記録できる。'],
+    ['#dayLine', 'その日のクエストを3分の2以上クリアすると「達成」。達成できないと、ボスの攻撃でHPが減る。'],
+    ['.who', 'EXPが貯まるとレベルアップ。HPが0になると戦闘不能になり、EXPを失う。'],
+    ['.pills', '🔥は連続達成日数。続けるほどEXPが増え、3日ごとに❄（身代わりのお守り）がもらえる。右はゴールドとジェム。'],
+    ['.top-btns', '👜アイテム、📬お知らせ、？ルール。迷ったら「？」を見よう。'],
+    ['.tabs', '装備やガチャは「ショップ」、カレンダーや魔物図鑑は「記録」、設定は「メニュー」にある。'],
+    [null, '準備は整った。さあ、冒険を始めよう！'],
+  ];
+  let tutStep = -1;
+  function startTutorial() {
+    closeSheet(); showTab('today');
+    tutStep = 0; $('tut').classList.remove('hidden');
+    showTut();
+  }
+  function showTut() {
+    const [sel, text] = TUT[tutStep];
+    const el = sel ? document.querySelector(sel) : null;
+    const hole = $('tutHole'), box = $('tutBox');
+    box.innerHTML = `<div class="tut-step">${tutStep + 1} / ${TUT.length}</div><div class="tut-text">${text}</div>
+      <div class="row mt12">${tutStep < TUT.length - 1 ? '<button class="btn gray" id="tutSkip">スキップ</button>' : ''}<button class="btn" id="tutNext">${tutStep < TUT.length - 1 ? '次へ' : '冒険を始める'}</button></div>`;
+    $('tutNext').onclick = () => { SFX.tap(); tutStep++; if (tutStep >= TUT.length) endTutorial(); else showTut(); };
+    const sk = $('tutSkip'); if (sk) sk.onclick = () => { SFX.tap(); endTutorial(); };
+    if (!el) { hole.style.cssText = 'left:50%;top:40%;width:0;height:0'; box.style.cssText = 'top:42%;bottom:auto'; return; }
+    const fixed = getComputedStyle(el).position === 'fixed' || el.closest('.top, .tabs');
+    if (!fixed) el.scrollIntoView({ block: 'center' });
+    setTimeout(() => {
+      const r = el.getBoundingClientRect(), pad = 6;
+      hole.style.cssText = `left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px`;
+      if (r.top + r.height / 2 < innerHeight / 2) box.style.cssText = `top:${Math.min(r.bottom + 16, innerHeight - 200)}px;bottom:auto`;
+      else box.style.cssText = `bottom:${Math.min(innerHeight - r.top + 16, innerHeight - 200)}px;top:auto`;
+    }, fixed ? 0 : 250);
+  }
+  function endTutorial() {
+    $('tut').classList.add('hidden'); tutStep = -1;
+    state.tutorialDone = true; save();
+    window.scrollTo(0, 0);
+    say(`${esc(state.name)}の冒険が始まる！`);
+  }
+  window.addEventListener('resize', () => { if (tutStep >= 0) showTut(); });
 
   // ---------- 通知 ----------
   const canNotify = () => 'Notification' in window;
@@ -1386,6 +1470,8 @@
   save();
   render();
   checkNotify();
+  // すでに遊んでいる人にも、チュートリアルを1回だけ見せる
+  if (state.onboarded && !state.tutorialDone) setTimeout(() => { if ($('lvModal').classList.contains('hidden') && $('sheet').classList.contains('hidden')) startTutorial(); }, 1500);
   if (!state.onboarded) {
     if (!Object.keys(state.log).length) startOnboarding(false);
     else {
