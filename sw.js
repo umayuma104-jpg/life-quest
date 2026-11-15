@@ -1,8 +1,9 @@
 // Life Quest service worker: オフライン対応と通知
 // アプリを更新したら VERSION を上げると、古いキャッシュが入れ替わる
-const VERSION = 'lq-v1';
+const VERSION = 'lq-v2';
+const FONT_CACHE = 'lq-fonts';
 const ASSETS = [
-  './', './index.html', './manifest.webmanifest',
+  './', './index.html', './manifest.webmanifest', './css/style.css', './js/app.js', './js/sprites.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png',
   './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
 ];
@@ -14,14 +15,24 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== FONT_CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  // ドット絵フォント（Google Fonts）もキャッシュしてオフラインで使えるようにする
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    e.respondWith(caches.open(FONT_CACHE).then(c => c.match(req).then(hit => {
+      const net = fetch(req).then(res => { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; }).catch(() => hit);
+      return hit || net;
+    })));
+    return;
+  }
+  if (url.origin !== location.origin) return;
   if (req.mode === 'navigate') {
     // ページ本体はネット優先（更新をすぐ反映）、オフライン時はキャッシュ
     e.respondWith(
@@ -33,7 +44,13 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // それ以外はキャッシュ優先
+  if (/\.(js|css)$/.test(url.pathname)) {
+    e.respondWith(fetch(req).then(res => {
+      const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res;
+    }).catch(() => caches.match(req)));
+    return;
+  }
+  // それ以外（アイコンなど）はキャッシュ優先
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
     return res;

@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
-<meta name="theme-color" content="#0f1222">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
 <meta name="description" content="毎日の習慣をクエストに。運動・早起きでレベルを上げる生活RPG">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -13,941 +13,217 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life Quest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
 <title>Life Quest</title>
-<style>
-  :root {
-    --bg: #0f1222; --panel: #181c33; --panel2: #20253f; --line: #2c3256;
-    --text: #e8eaf6; --muted: #8d93b8; --accent: #ffcc4d; --xp: #5ee0a0;
-    --str: #ff6b6b; --int: #4dabf7; --mnd: #b197fc; --vit: #69db7c;
-    --danger: #ff6b6b; --hp: #ff5c7a; --ice: #74c0fc;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
-  body { padding-bottom: 80px; }
-  .wrap { max-width: 560px; margin: 0 auto; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); }
-  button { font: inherit; color: inherit; cursor: pointer; }
-  button:disabled { opacity: .4; cursor: default; }
-  input, select { font: inherit; color: var(--text); background: var(--panel2);
-    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
-
-  /* header */
-  .hero { background: linear-gradient(135deg, #262c55, #1a1e3a); border: 1px solid var(--line);
-    border-radius: 16px; padding: 16px; }
-  .hero-top { display: flex; align-items: center; gap: 14px; }
-  .lv { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
-    background: radial-gradient(circle at 30% 30%, #ffe08a, #f5a623); color: #3a2600;
-    font-weight: 800; flex-shrink: 0; box-shadow: 0 0 18px #f5a62355; }
-  .lv small { display: block; font-size: 10px; line-height: 1; text-align: center; }
-  .lv b { font-size: 24px; line-height: 1; }
-  .title { font-size: 13px; color: var(--accent); }
-  .name { font-size: 20px; font-weight: 700; }
-  .bar { height: 10px; background: #0b0e1c; border-radius: 6px; overflow: hidden; margin-top: 12px; }
-  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, #38d9a9, var(--xp));
-    width: 0; transition: width .6s cubic-bezier(.2,.8,.2,1); }
-  .bar.hp > i { background: linear-gradient(90deg, #e03131, var(--hp)); }
-  .bar.boss > i { background: linear-gradient(90deg, #9c36b5, #f06595); }
-  .bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; gap: 8px; }
-  .chips { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .chip { background: #0b0e1c88; border: 1px solid var(--line); border-radius: 999px;
-    padding: 4px 10px; font-size: 13px; }
-  .chip.ice { border-color: #74c0fc66; color: var(--ice); }
-
-  /* today */
-  h2 { font-size: 15px; color: var(--muted); margin: 22px 0 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .progress-ring { font-size: 13px; color: var(--text); white-space: nowrap; }
-  .task { display: flex; align-items: center; gap: 12px; background: var(--panel);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 8px;
-    transition: transform .15s, border-color .2s, background .2s; }
-  .task.done { border-color: #38d9a966; background: #17302a; }
-  .task .ic { font-size: 26px; width: 36px; text-align: center; flex-shrink: 0; }
-  .task .body { flex: 1; min-width: 0; }
-  .task .tn { font-weight: 600; }
-  .task .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .task .ctrl { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .check { width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--line);
-    background: var(--panel2); font-size: 20px; display: grid; place-items: center; }
-  .task.done .check { background: var(--xp); border-color: var(--xp); color: #0b2a1d; }
-  .ctrl input[type=number] { width: 70px; text-align: right; }
-  .ctrl input[type=time] { width: 110px; }
-  .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-right: 4px;
-    font-weight: 700; color: #111; }
-  .t-str { background: var(--str); } .t-int { background: var(--int); }
-  .t-mnd { background: var(--mnd); } .t-vit { background: var(--vit); }
-  .gain { color: var(--xp); font-weight: 700; }
-
-  /* boss */
-  .boss { background: linear-gradient(135deg, #2a1838, #1a1530); border: 1px solid #5f3dc466; border-radius: 14px; padding: 14px; margin-top: 16px; }
-  .boss.dead { border-color: #ffcc4d88; background: linear-gradient(135deg, #2f2a16, #1a1a26); }
-  .boss-top { display: flex; align-items: center; gap: 12px; }
-  .boss-face { font-size: 44px; line-height: 1; flex-shrink: 0; }
-  .boss.dead .boss-face { filter: grayscale(1); opacity: .5; }
-  .boss-face.hit { animation: shake .4s; }
-  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px) rotate(-6deg); } 75% { transform: translateX(6px) rotate(6deg); } }
-
-  /* stats */
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
-  .stat { display: grid; grid-template-columns: 80px 1fr 56px; gap: 10px; align-items: center; margin: 10px 0; }
-  .stat .sbar { height: 8px; background: #0b0e1c; border-radius: 4px; overflow: hidden; }
-  .stat .sbar i { display: block; height: 100%; }
-  .stat .sv { text-align: right; font-weight: 700; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-  .kpi .k { font-size: 12px; color: var(--muted); }
-  .kpi .v { font-size: 22px; font-weight: 800; margin-top: 2px; }
-
-  /* calendar */
-  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  .cal .d { aspect-ratio: 1; border-radius: 6px; background: var(--panel2); display: grid; place-items: center;
-    font-size: 11px; color: var(--muted); }
-  .cal .h { font-size: 11px; color: var(--muted); text-align: center; }
-  .legend { display: flex; gap: 6px 10px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
-  .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; vertical-align: -2px; margin-right: 3px; }
-
-  /* settings */
-  .edit-row { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
-  .edit-row:last-child { border-bottom: 0; }
-  .edit-row .tn { flex: 1; min-width: 0; }
-  .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
-  .btn.primary { background: var(--accent); color: #3a2600; border-color: var(--accent); font-weight: 700; }
-  .btn.danger { color: var(--danger); }
-  .btn.sm { padding: 4px 8px; font-size: 13px; }
-  .form { display: grid; gap: 8px; }
-  .form input, .form select { width: 100%; min-width: 0; }
-  .form label { font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
-  .row { display: flex; gap: 8px; }
-  .row > * { flex: 1; min-width: 0; }
-  .days { display: flex; gap: 4px; }
-  .days button { flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--muted); }
-  .days button.on { background: var(--accent); color: #3a2600; border-color: var(--accent); font-weight: 700; }
-  .hidden { display: none !important; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-
-  /* nav */
-  nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0b0e1cf2; border-top: 1px solid var(--line);
-    display: flex; justify-content: center; padding-bottom: env(safe-area-inset-bottom); backdrop-filter: blur(8px); z-index: 10; }
-  nav .in { display: flex; max-width: 560px; width: 100%; }
-  nav button { flex: 1; background: none; border: 0; padding: 10px 0 12px; color: var(--muted); font-size: 11px; }
-  nav button .i { display: block; font-size: 22px; }
-  nav button.on { color: var(--accent); }
-
-  /* modal & toast */
-  .modal { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 50; padding: 16px; }
-  .modal .box { background: var(--panel); border: 1px solid var(--accent); border-radius: 18px; padding: 24px 20px;
-    text-align: center; max-width: 360px; width: 100%; animation: pop .5s cubic-bezier(.2,1.6,.4,1); max-height: 85vh; overflow: auto; }
-  .modal .big { font-size: 56px; font-weight: 900; color: var(--accent); text-shadow: 0 0 24px #ffcc4d88; }
-  .ev { text-align: left; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; display: flex; gap: 8px; }
-  .ev:last-child { border-bottom: 0; }
-  .ev .dt { color: var(--muted); font-size: 12px; flex-shrink: 0; width: 40px; padding-top: 2px; }
-  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: #0b2a1d;
-    border: 1px solid var(--xp); color: var(--xp); padding: 8px 16px; border-radius: 999px; font-weight: 700;
-    z-index: 40; animation: rise 1.8s forwards; pointer-events: none; white-space: nowrap; }
-  .toast.ice { background: #0d2238; border-color: var(--ice); color: var(--ice); }
-  .toast.boss { background: #2f2a16; border-color: var(--accent); color: var(--accent); }
-  @keyframes rise { 0% { opacity: 0; transform: translate(-50%, 10px); } 12% { opacity: 1; transform: translate(-50%, 0); }
-    80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -20px); } }
-</style>
 </head>
 <body>
 <div class="wrap">
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-top">
-      <div class="lv"><div><small>LV</small><b id="lvNum">1</b></div></div>
-      <div style="flex:1;min-width:0">
-        <div class="title" id="titleTxt">見習い</div>
-        <div class="name" id="heroName">冒険者</div>
+  <!-- ステータス -->
+  <section class="win" id="heroWin">
+    <h3>ステータス</h3>
+    <div class="hero-row">
+      <div class="hero-pic" id="heroPic"></div>
+      <div class="grow">
+        <div class="between"><span class="name" id="heroName">ぼうけんしゃ</span><span>Lv <b class="y big" id="lvNum">1</b></span></div>
+        <div class="dim small" id="titleTxt">しょうごう：見習い</div>
       </div>
     </div>
-    <div class="bar hp"><i id="hpBar"></i></div>
-    <div class="bar-label"><span id="hpTxt">HP 100 / 100</span><span id="hpNote"></span></div>
-    <div class="bar" style="margin-top:8px"><i id="xpBar"></i></div>
-    <div class="bar-label"><span id="xpTxt">0 / 100 XP</span><span id="xpNext">次のレベルまで 100</span></div>
+    <div class="between small mt8"><span>HP</span><span id="hpTxt">100/100</span></div>
+    <div class="pbar hp"><i id="hpBar"></i></div>
+    <div class="between small"><span>EXP</span><span id="xpTxt">0/80</span></div>
+    <div class="pbar xp"><i id="xpBar"></i></div>
     <div class="chips">
-      <span class="chip" id="streakChip">🔥 連続 0日</span>
-      <span class="chip ice" id="freezeChip">❄️ ×0</span>
-      <span class="chip" id="bonusChip">ボーナス ×1.0</span>
-      <span class="chip" id="totalChip">累計 0 XP</span>
+      <span id="streakChip">🔥れんぞく 0にち</span>
+      <span class="b" id="freezeChip">❄×0</span>
+      <span class="y" id="bonusChip">EXP×1.00</span>
     </div>
   </section>
 
-  <!-- TODAY -->
+  <!-- きょう -->
   <section id="tab-today">
-    <div class="boss" id="bossCard"></div>
-
-    <h2><span id="todayLabel">今日のクエスト</span><span class="progress-ring" id="todayProg">0 / 0</span></h2>
-    <div class="bar" style="margin-top:0"><i id="dayBar"></i></div>
-    <div class="bar-label"><span id="dayMsg"></span></div>
-    <div id="taskList" style="margin-top:12px"></div>
-  </section>
-
-  <!-- STATS -->
-  <section id="tab-stats" class="hidden">
-    <h2>ステータス</h2>
-    <div class="card" id="statCard"></div>
-    <div class="grid2" id="kpis"></div>
-    <h2>ルール</h2>
-    <div class="card muted" style="line-height:1.7">
-      ・その日の予定クエストの<b>70%以上</b>クリアで「達成日」。HPが10回復し、連続記録+1<br>
-      ・連続記録1日ごとにXP+5%（最大×1.5）<br>
-      ・連続<b>3日ごと</b>に ❄️凍結アイテムを1個獲得<br>
-      ・達成できなかった日は ❄️を1個自動で使い、ダメージと連続記録リセットを防ぐ<br>
-      ・❄️が無いと、未達成で <b>-15HP</b>、何も記録しない日は <b>-25HP</b>。連続記録は0に<br>
-      ・HPが0になると<b>戦闘不能</b>：今のレベルで貯めたXPの半分を失い、HP全回復<br>
-      ・毎週月曜に新しいボスが出現。その週に稼いだXPがそのままダメージになり、倒すと報酬XP
+    <div class="win hidden" id="backupWin">
+      <h3>おしらせ</h3>
+      <div id="backupMsg"></div>
+      <div class="btns mt8"><button class="pbtn primary" id="backupNow">バックアップする</button><button class="pbtn" id="backupLater">あとで</button></div>
     </div>
-    <h2>称号</h2>
-    <div class="card" id="titleList"></div>
+
+    <div class="win boss-win" id="bossWin"></div>
+
+    <div class="win">
+      <h3 id="todayTitle">きょうの クエスト</h3>
+      <div id="taskList"></div>
+      <div class="foot" id="dayFoot"></div>
+    </div>
+
+    <div class="win msg" id="msgWin"></div>
   </section>
 
-  <!-- LOG -->
+  <!-- つよさ -->
+  <section id="tab-stats" class="hidden">
+    <div class="win">
+      <h3>そうび</h3>
+      <div class="hero-row">
+        <div id="heroBig"></div>
+        <div class="grow" id="equipList"></div>
+      </div>
+    </div>
+    <div class="win"><h3>のうりょく</h3><div id="statList"></div></div>
+    <div class="win"><h3>きろく</h3><div class="kpis" id="kpis"></div></div>
+    <div class="win"><h3>しょうごう</h3><div id="titleList"></div></div>
+    <div class="win small"><h3>ルール</h3>
+      <div class="rules">
+        ▶ その日の クエストを 3ぶんの2 いじょう クリアすると「たっせい日」。HPが 10 かいふく し、れんぞく きろく ＋1<br>
+        ▶ れんぞく 1にち ごとに EXP ＋5%（さいだい ×1.5）<br>
+        ▶ れんぞく 3にち ごとに ❄こおりの おまもり を 1こ ゲット<br>
+        ▶ たっせい できなかった 日は ❄を 1こ つかって ダメージと れんぞく リセットを ふせぐ<br>
+        ▶ ❄が ないと みたっせい で HP−15、なにも きろく しないと HP−25。れんぞく は 0 に<br>
+        ▶ はやおきは 30ぷん いないの ちこくなら EXP はんぶん<br>
+        ▶ HPが 0 になると せんとうふのう。いまの レベルで ためた EXP の はんぶんを うしなう<br>
+        ▶ まいしゅう げつようびに ボスが あらわれる。かせいだ EXP が そのまま ダメージ になる<br>
+        ▶ レベルが あがると クエストわく と そうび が ふえる
+      </div>
+    </div>
+  </section>
+
+  <!-- きろく -->
   <section id="tab-log" class="hidden">
-    <h2>過去5週間の記録</h2>
-    <div class="card">
+    <div class="win"><h3>5しゅうかんの きろく</h3>
       <div class="cal" id="cal"></div>
       <div class="legend">
-        <span><i style="background:#5ee0a0"></i>全クリア</span>
-        <span><i style="background:#2b9a6c"></i>達成日</span>
-        <span><i style="background:#1e5a8a"></i>❄️凍結</span>
-        <span><i style="background:#6b2635"></i>ダメージ</span>
-        <span><i style="background:#2a2f4a"></i>休息日</span>
+        <span><i style="background:var(--g)"></i>ぜんぶ</span>
+        <span><i style="background:#1f8a4c"></i>たっせい</span>
+        <span><i style="background:#1e5a8a"></i>❄</span>
+        <span><i style="background:#8a1f2c"></i>ダメージ</span>
+        <span><i style="background:#2a2a4a"></i>やすみ</span>
       </div>
     </div>
-    <h2>ボス討伐の記録</h2>
-    <div id="bossLog"></div>
-    <h2>起床時刻の推移（14日）</h2>
-    <div class="card"><svg id="wakeChart" viewBox="0 0 320 140" width="100%" style="display:block"></svg></div>
-    <h2>最近の出来事</h2>
-    <div class="card" id="recent"></div>
+    <div class="win"><h3>まもの ずかん</h3><div class="dex" id="dex"></div></div>
+    <div class="win"><h3>おきた じかん（14にち）</h3><svg id="wakeChart" viewBox="0 0 320 140" width="100%" style="display:block"></svg></div>
+    <div class="win"><h3>ぼうけんの にっし</h3><div id="recent"></div></div>
   </section>
 
-  <!-- SETTINGS -->
+  <!-- せってい -->
   <section id="tab-settings" class="hidden">
-    <h2>プロフィール</h2>
-    <div class="card form">
-      <label>名前<input id="nameInput" maxlength="20"></label>
+    <div class="win"><h3>なまえ</h3><input id="nameInput" maxlength="12" class="full"></div>
+
+    <div class="win">
+      <h3 id="slotTitle">クエスト</h3>
+      <div id="editList"></div>
+      <div class="btns mt8"><button class="pbtn primary" id="addBtn">＋ クエストを ふやす</button></div>
+      <div class="dim small mt8" id="slotNote"></div>
     </div>
 
-    <h2>クエスト一覧 <button class="btn sm primary" id="addBtn">＋ 追加</button></h2>
-    <div class="card" id="editList"></div>
-
-    <div class="card form hidden" id="taskForm">
-      <b id="formTitle">クエストを追加</b>
-      <div class="row">
-        <label style="flex:0 0 70px">アイコン<input id="fIcon" maxlength="4" value="⭐"></label>
-        <label>名前<input id="fName" maxlength="24" placeholder="例: 腕立て伏せ"></label>
-      </div>
-      <label>種類
-        <select id="fType">
-          <option value="check">チェック（やった/やってない）</option>
-          <option value="count">回数・量（目標値あり）</option>
-          <option value="wake">起床時刻（目標時刻より早く）</option>
+    <div class="win hidden" id="taskForm">
+      <h3 id="formTitle">クエストを ついか</h3>
+      <div class="small dim">おすすめから えらぶ</div>
+      <div class="tpls" id="tplList"></div>
+      <label class="fl">なまえ<input id="fName" maxlength="20" class="full"></label>
+      <div class="small dim mt8">アイコン</div>
+      <div class="icons" id="iconPick"></div>
+      <label class="fl">しゅるい
+        <select id="fType" class="full">
+          <option value="check">やった / やってない</option>
+          <option value="count">かいすう・じかん（もくひょう あり）</option>
+          <option value="wake">おきる じかん</option>
         </select>
       </label>
-      <div class="row">
-        <label>能力
-          <select id="fCat">
-            <option value="str">体力 STR</option>
-            <option value="int">知力 INT</option>
-            <option value="mnd">精神 MND</option>
-            <option value="vit">生活 VIT</option>
+      <div class="two">
+        <label class="fl">のうりょく
+          <select id="fCat" class="full">
+            <option value="str">STR たいりょく</option>
+            <option value="int">INT ちりょく</option>
+            <option value="mnd">MND せいしん</option>
+            <option value="vit">VIT せいかつ</option>
           </select>
         </label>
-        <label>獲得XP<input id="fXp" type="number" min="1" max="500" value="20"></label>
+        <label class="fl">EXP<input id="fXp" type="number" min="1" max="500" class="full"></label>
       </div>
-      <div class="row" id="fTargetRow">
-        <label>目標値<input id="fTarget" type="number" min="1" value="30"></label>
-        <label>単位<input id="fUnit" maxlength="8" value="回"></label>
+      <div class="two" id="fCountRow">
+        <label class="fl">もくひょう<input id="fTarget" type="number" min="0.1" step="any" class="full"></label>
+        <label class="fl">たんい<input id="fUnit" maxlength="6" class="full"></label>
       </div>
-      <div class="row hidden" id="fWakeRow">
-        <label>目標起床時刻<input id="fWake" type="time" value="06:00"></label>
-      </div>
-      <label>実施する曜日<div class="days" id="fDays"></div></label>
-      <div class="row">
-        <button class="btn" id="cancelBtn">キャンセル</button>
-        <button class="btn primary" id="saveBtn">保存</button>
-      </div>
+      <label class="fl hidden" id="fWakeRow">もくひょうの きしょう じかん<input id="fWake" type="time" class="full"></label>
+      <div class="small dim mt8">やる ようび</div>
+      <div class="days" id="fDays"></div>
+      <div class="btns mt8"><button class="pbtn" id="cancelBtn">やめる</button><button class="pbtn primary" id="saveBtn">けってい</button></div>
     </div>
 
-    <h2>リマインダー</h2>
-    <div class="card form">
-      <div class="switch"><span>通知を使う</span><button class="btn sm" id="notifyBtn">OFF</button></div>
-      <div class="row">
-        <label>朝の通知（今日のクエスト）<input type="time" id="nMorning"></label>
-        <label>夜の通知（やり残し）<input type="time" id="nEvening"></label>
+    <div class="win"><h3>しつもん</h3>
+      <div class="small">しつもんに こたえて、いまの クエストを えらびなおす ことが できます。</div>
+      <div class="btns mt8"><button class="pbtn" id="redoOb">しつもんに こたえる</button></div>
+    </div>
+
+    <div class="win"><h3>サウンド・しんどう</h3>
+      <div class="between"><span>こうかおん</span><button class="pbtn" id="soundBtn">ON</button></div>
+      <div class="between mt8"><span>しんどう（Android）</span><button class="pbtn" id="vibeBtn">ON</button></div>
+    </div>
+
+    <div class="win"><h3>リマインダー</h3>
+      <div class="between"><span>つうち</span><button class="pbtn" id="notifyBtn">OFF</button></div>
+      <div class="two mt8">
+        <label class="fl">あさ<input type="time" id="nMorning" class="full"></label>
+        <label class="fl">よる（やりのこし）<input type="time" id="nEvening" class="full"></label>
       </div>
-      <p class="muted" id="notifyNote" style="margin:0">通知はアプリ（またはブラウザのタブ）がバックグラウンドで動いている間に届きます。完全に終了していると届かないことがあります。
-        確実に毎日通知を受けたい場合は、下のボタンでスマホ/PCのカレンダーに毎日のリマインダーを登録してください。</p>
-      <button class="btn" id="icsBtn">📅 カレンダーにリマインダーを追加（.ics）</button>
+      <div class="small dim mt8">アプリを かんぜんに とじていると とどかない ことが あります。かならず つうちが ほしい ときは カレンダーに とうろく してください。</div>
+      <div class="btns mt8"><button class="pbtn" id="icsBtn">カレンダーに とうろく</button></div>
     </div>
 
-    <h2>アプリとしてインストール</h2>
-    <div class="card form" id="installCard">
-      <p class="muted" id="installMsg" style="margin:0"></p>
-      <button class="btn primary hidden" id="installBtn">📲 ホーム画面に追加</button>
+    <div class="win"><h3>バックアップ</h3>
+      <div class="small" id="backupInfo"></div>
+      <div class="btns mt8">
+        <button class="pbtn primary" id="exportBtn">バックアップ</button>
+        <button class="pbtn" id="importBtn">ふっかつ</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" class="hidden">
     </div>
 
-    <h2>データ</h2>
-    <div class="card row" style="flex-wrap:wrap">
-      <button class="btn" id="exportBtn">エクスポート</button>
-      <button class="btn" id="importBtn">インポート</button>
-      <button class="btn danger" id="resetBtn">全リセット</button>
-      <input type="file" id="importFile" accept="application/json" class="hidden">
+    <div class="win"><h3>インストール</h3>
+      <div class="small" id="installMsg"></div>
+      <div class="btns mt8"><button class="pbtn primary hidden" id="installBtn">ホームがめんに ついか</button></div>
     </div>
-    <p class="muted">データはこの端末のブラウザ内に保存されます。日付の切り替えは午前3時です。</p>
+
+    <div class="win"><h3>きけん</h3>
+      <div class="btns"><button class="pbtn danger" id="resetBtn">さいしょから やりなおす</button></div>
+      <div class="small dim mt8">日付の きりかえは ごぜん3じ です。</div>
+    </div>
   </section>
 </div>
 
 <nav><div class="in">
-  <button data-tab="today" class="on"><span class="i">⚔️</span>クエスト</button>
-  <button data-tab="stats"><span class="i">📊</span>ステータス</button>
-  <button data-tab="log"><span class="i">📅</span>記録</button>
-  <button data-tab="settings"><span class="i">⚙️</span>設定</button>
+  <button data-tab="today" class="on">クエスト</button>
+  <button data-tab="stats">つよさ</button>
+  <button data-tab="log">きろく</button>
+  <button data-tab="settings">せってい</button>
 </div></nav>
 
-<div class="modal hidden" id="lvModal">
-  <div class="box">
-    <div style="letter-spacing:.3em;color:var(--muted)">LEVEL UP!</div>
-    <div class="big" id="lvModalNum">2</div>
-    <div id="lvModalTitle" style="margin:6px 0 18px"></div>
-    <button class="btn primary" style="width:100%" data-close>続ける</button>
-  </div>
-</div>
+<div class="flash hidden" id="flash"></div>
 
-<div class="modal hidden" id="reportModal">
-  <div class="box">
-    <div style="font-weight:700;font-size:18px;margin-bottom:8px">📜 前回からの出来事</div>
-    <div id="reportList"></div>
-    <button class="btn primary" style="width:100%;margin-top:14px" data-close>OK</button>
-  </div>
-</div>
+<div class="modal hidden" id="lvModal"><div class="win center">
+  <h3>LEVEL UP!</h3>
+  <div id="lvHero"></div>
+  <div class="lvnum">Lv <span id="lvModalNum">2</span></div>
+  <div id="lvModalInfo" class="small"></div>
+  <div class="btns mt8 center-btns"><button class="pbtn" id="lvShare">Xで シェア</button><button class="pbtn primary" data-close>つづける</button></div>
+</div></div>
 
-<script>
-(() => {
-  'use strict';
-  const KEY = 'lifeQuest.v1';
-  const DAY_START_HOUR = 3;      // 午前3時までは前日扱い
-  const CLEAR_RATIO = 0.7;       // 達成日の基準
-  const MAX_HP = 100;
-  const HEAL = 10, DMG_PARTIAL = 15, DMG_NONE = 25;
-  const FREEZE_EVERY = 3;        // 連続3日ごとに凍結アイテム
-  const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
-  const WD = '日月火水木金土';
-  const CATS = {
-    str: { name: '体力', en: 'STR', color: 'var(--str)' },
-    int: { name: '知力', en: 'INT', color: 'var(--int)' },
-    mnd: { name: '精神', en: 'MND', color: 'var(--mnd)' },
-    vit: { name: '生活', en: 'VIT', color: 'var(--vit)' },
-  };
-  const TITLES = [
-    [1, '見習い'], [3, '駆け出しの冒険者'], [5, '規律の挑戦者'], [8, '鍛錬の戦士'],
-    [12, '習慣の騎士'], [16, '鋼の意志'], [20, '自己の支配者'], [25, '覚醒者'],
-    [30, '英雄'], [40, '伝説'], [50, '人生の到達者'],
-  ];
-  const BOSSES = [
-    ['🟢', '怠惰のスライム'], ['👺', '二度寝ゴブリン'], ['🧛', '夜更かしの吸血鬼'],
-    ['👹', 'ジャンクフード・オーク'], ['👻', 'スマホ中毒の亡霊'], ['🗿', '三日坊主ゴーレム'],
-    ['🦇', 'ダラダラ蝙蝠'], ['🐙', '言い訳クラーケン'], ['🐉', '先延ばしドラゴン'], ['💀', '惰性の魔王'],
-  ];
-  const DEFAULT_TASKS = [
-    { icon: '🌅', name: '早起き', type: 'wake', cat: 'vit', xp: 30, wake: '06:00' },
-    { icon: '💪', name: '腕立て伏せ', type: 'count', cat: 'str', xp: 20, target: 30, unit: '回' },
-    { icon: '🏃', name: 'ランニング', type: 'count', cat: 'str', xp: 30, target: 20, unit: '分', days: [1, 3, 5, 6] },
-    { icon: '🚶', name: 'ウォーキング', type: 'count', cat: 'str', xp: 15, target: 30, unit: '分', days: [0, 2, 4] },
-    { icon: '💧', name: '水を飲む', type: 'count', cat: 'vit', xp: 10, target: 2, unit: 'L' },
-    { icon: '📚', name: '読書', type: 'count', cat: 'int', xp: 20, target: 20, unit: 'ページ' },
-    { icon: '🧘', name: '瞑想', type: 'count', cat: 'mnd', xp: 15, target: 10, unit: '分' },
-    { icon: '📵', name: '寝る前1時間スマホを見ない', type: 'check', cat: 'mnd', xp: 20 },
-    { icon: '🧹', name: '部屋を片付ける', type: 'check', cat: 'vit', xp: 10, days: [0, 6] },
-  ];
+<div class="modal hidden" id="reportModal"><div class="win">
+  <h3>ぼうけんの きろく</h3>
+  <div id="reportList"></div>
+  <div class="btns mt8"><button class="pbtn primary full" data-close>OK</button></div>
+</div></div>
 
-  // ---------- dates ----------
-  const pad = n => String(n).padStart(2, '0');
-  const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  function todayKey() { const d = new Date(); d.setHours(d.getHours() - DAY_START_HOUR); return keyOf(d); }
-  function parseKey(k) { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); }
-  function addDays(k, n) { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); }
-  const dow = k => parseKey(k).getDay();
-  const weekStart = k => addDays(k, -((dow(k) + 6) % 7));       // 月曜始まり
-  const md = k => `${+k.slice(5, 7)}/${+k.slice(8)}`;
-  const toMin = t => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+<div class="modal hidden" id="askModal"><div class="win">
+  <h3>おしらせ</h3>
+  <div id="askMsg"></div>
+  <div class="btns mt8"><button class="pbtn" id="askNo">いいえ</button><button class="pbtn primary" id="askYes">はい</button></div>
+</div></div>
 
-  // ---------- state ----------
-  const uid = () => Math.random().toString(36).slice(2, 10);
-  function freshState() {
-    const t = todayKey();
-    return {
-      name: '冒険者', tasks: DEFAULT_TASKS.map(x => ({ id: uid(), days: ALL_DAYS.slice(), ...x })),
-      log: {}, lastLevel: 1, start: t, seenUntil: addDays(t, -1),
-      notify: { on: false, morning: '07:00', evening: '21:00', sent: {} },
-    };
-  }
-  function migrate(s) {
-    const t = todayKey();
-    s.tasks.forEach(x => { if (!Array.isArray(x.days) || !x.days.length) x.days = ALL_DAYS.slice(); });
-    if (!s.start) s.start = Object.keys(s.log || {}).sort()[0] || t;
-    if (!s.seenUntil) s.seenUntil = addDays(t, -1);
-    if (!s.notify) s.notify = { on: false, morning: '07:00', evening: '21:00', sent: {} };
-    if (!s.notify.sent) s.notify.sent = {};
-    s.log = s.log || {};
-    return s;
-  }
-  function load() {
-    try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.tasks)) return migrate(s); } catch (e) {}
-    return freshState();
-  }
-  let state = load();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+<div class="ob hidden" id="ob"><div class="ob-in" id="obBox"></div></div>
 
-  const scheduledOn = k => state.tasks.filter(t => t.days.includes(dow(k)));
-
-  // ---------- scoring ----------
-  function completion(task, v) {
-    if (v == null || v === '' || v === false) return 0;
-    if (task.type === 'check') return v ? 1 : 0;
-    if (task.type === 'count') return Math.max(0, Math.min(1, Number(v) / (task.target || 1)));
-    if (task.type === 'wake') {
-      const diff = toMin(v) - toMin(task.wake);
-      if (diff <= 0) return 1;
-      if (diff <= 30) return 0.5;
-      return 0;
-    }
-    return 0;
-  }
-  const isDone = (task, v) => completion(task, v) >= 1;
-  const bonusFor = streak => Math.min(1.5, 1 + streak * 0.05);
-  const need = lv => Math.round(80 * Math.pow(lv, 1.35));
-  function levelOf(xp) {
-    let lv = 1, rest = Math.max(0, xp);
-    while (rest >= need(lv)) { rest -= need(lv); lv++; }
-    return { lv, rest, need: need(lv) };
-  }
-  const titleOf = lv => TITLES.filter(t => lv >= t[0]).pop()[1];
-
-  function bossFor(ws) {
-    const idx = Math.floor(parseKey(ws).getTime() / (7 * 864e5)) % BOSSES.length;
-    let hp = 0;
-    for (let i = 0; i < 7; i++) {
-      const k = addDays(ws, i);
-      if (k < state.start) continue;                              // 開始前の日は数えない
-      hp += scheduledOn(k).reduce((a, t) => a + t.xp, 0);
-    }
-    hp = Math.max(50, Math.round(hp * CLEAR_RATIO));
-    return { ws, icon: BOSSES[idx][0], name: BOSSES[idx][1], hp, dmg: 0, defeated: null, reward: Math.round(hp * 0.3) };
-  }
-
-  // 開始日から今日まで毎日を順に再生して、XP・HP・連続記録・凍結・ボスをすべて再計算する
-  function compute() {
-    const tKey = todayKey();
-    const byId = Object.fromEntries(state.tasks.map(t => [t.id, t]));
-    const cat = { str: 0, int: 0, mnd: 0, vit: 0 };
-    const perDay = {}, events = [], bosses = {};
-    let total = 0, hp = MAX_HP, streak = 0, best = 0, freezes = 0;
-    let clearedDays = 0, frozenDays = 0, knockouts = 0, bossWins = 0, freezeEarned = 0;
-    let boss = null;
-
-    let first = state.start;
-    const logFirst = Object.keys(state.log).sort()[0];
-    if (logFirst && logFirst < first) first = logFirst;
-
-    for (let k = first; k <= tKey; k = addDays(k, 1)) {
-      const ws = weekStart(k);
-      if (!boss || boss.ws !== ws) { boss = bossFor(ws); bosses[ws] = boss; }
-
-      const entries = state.log[k] || {};
-      const sched = scheduledOn(k);
-      const mult = bonusFor(streak);
-      let dayXp = 0, done = 0;
-      for (const id in entries) {
-        const t = byId[id]; if (!t) continue;
-        const c = completion(t, entries[id]);
-        const g = Math.round(t.xp * c * mult);
-        dayXp += g; cat[t.cat] += g;
-        if (c >= 1 && t.days.includes(dow(k))) done++;
-      }
-      const count = sched.length;
-      const recorded = Object.keys(entries).length > 0;
-      const cleared = count > 0 && done / count >= CLEAR_RATIO;
-      const isToday = k === tKey;
-      let status;
-
-      total += dayXp;
-      if (count === 0) status = 'rest';
-      else if (cleared) {
-        status = 'cleared'; streak++; clearedDays++; best = Math.max(best, streak);
-        hp = Math.min(MAX_HP, hp + HEAL);
-        if (streak % FREEZE_EVERY === 0) {
-          freezes++; freezeEarned++;
-          events.push({ k, icon: '❄️', text: `連続${streak}日達成！ 凍結アイテムを獲得（所持 ${freezes}）` });
-        }
-      } else if (isToday) status = 'pending';
-      else if (freezes > 0) {
-        freezes--; frozenDays++; status = 'frozen';
-        events.push({ k, icon: '🧊', text: `未達成…凍結アイテムを使用。連続${streak}日とボーナスを守った（残り ${freezes}）` });
-      } else {
-        const dmg = recorded ? DMG_PARTIAL : DMG_NONE;
-        hp -= dmg; status = 'damage';
-        const lostStreak = streak; streak = 0;
-        events.push({ k, icon: '💥', text: `${recorded ? '未達成' : 'サボり'}で ${dmg} ダメージ（HP ${Math.max(0, hp)}）${lostStreak ? `。連続${lostStreak}日が途切れた` : ''}` });
-        if (hp <= 0) {
-          const L = levelOf(total);
-          const lost = Math.floor(L.rest / 2);
-          total -= lost; hp = MAX_HP; knockouts++;
-          events.push({ k, icon: '☠️', text: `戦闘不能！ ${lost} XP を失った。HP全回復で再起` });
-        }
-      }
-
-      boss.dmg += dayXp;
-      if (!boss.defeated && boss.dmg >= boss.hp) {
-        boss.defeated = k; total += boss.reward; bossWins++;
-        events.push({ k, icon: '⚔️', text: `${boss.icon} ${boss.name} を討伐！ 報酬 +${boss.reward} XP` });
-      }
-      perDay[k] = { xp: dayXp, done, count, cleared, mult, status, hp };
-    }
-    const today = perDay[tKey];
-    return {
-      total, cat, perDay, events, bosses, boss: bosses[weekStart(tKey)], streak, best, freezes, hp,
-      clearedDays, frozenDays, knockouts, bossWins, freezeEarned, mult: today ? today.mult : bonusFor(streak),
-    };
-  }
-
-  // ---------- render ----------
-  const $ = id => document.getElementById(id);
-  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  let C = null;
-
-  function render() {
-    const c = C = compute();
-    const L = levelOf(c.total);
-    $('lvNum').textContent = L.lv;
-    $('titleTxt').textContent = titleOf(L.lv);
-    $('heroName').textContent = state.name;
-    $('hpBar').style.width = (c.hp / MAX_HP * 100) + '%';
-    $('hpTxt').textContent = `HP ${c.hp} / ${MAX_HP}`;
-    $('hpNote').textContent = c.freezes ? '❄️ 凍結で守られています' : c.hp <= 25 ? '⚠️ 次のサボりで戦闘不能' : '';
-    $('xpBar').style.width = (L.rest / L.need * 100) + '%';
-    $('xpTxt').textContent = `${L.rest} / ${L.need} XP`;
-    $('xpNext').textContent = `次のレベルまで ${L.need - L.rest}`;
-    $('streakChip').textContent = `🔥 連続 ${c.streak}日`;
-    const toNext = FREEZE_EVERY - (c.streak % FREEZE_EVERY);
-    $('freezeChip').textContent = `❄️ ×${c.freezes}`;
-    $('freezeChip').title = `あと${toNext}日の連続達成で次の凍結アイテム`;
-    $('bonusChip').textContent = `ボーナス ×${c.mult.toFixed(2)}`;
-    $('totalChip').textContent = `累計 ${c.total.toLocaleString()} XP`;
-
-    renderBoss(c);
-    renderToday(c);
-    renderStats(c, L);
-    renderLog(c);
-    renderSettings();
-
-    if (L.lv > (state.lastLevel || 1)) {
-      $('lvModalNum').textContent = L.lv;
-      $('lvModalTitle').textContent = `称号：${titleOf(L.lv)}`;
-      $('lvModal').classList.remove('hidden');
-    }
-    if (L.lv !== state.lastLevel) { state.lastLevel = L.lv; save(); }
-    showReport(c);
-  }
-
-  // 前回開いた後に確定した日の出来事をまとめて表示
-  function showReport(c) {
-    const y = addDays(todayKey(), -1);
-    if (state.seenUntil >= y) return;
-    const evs = c.events.filter(e => e.k > state.seenUntil && e.k <= y);
-    state.seenUntil = y; save();
-    if (!evs.length) return;
-    $('reportList').innerHTML = evs.map(e => `<div class="ev"><span class="dt">${md(e.k)}</span><span>${e.icon} ${esc(e.text)}</span></div>`).join('');
-    $('reportModal').classList.remove('hidden');
-  }
-
-  function renderBoss(c) {
-    const b = c.boss, t = todayKey();
-    const left = Math.max(0, b.hp - b.dmg);
-    const daysLeft = 6 - ((dow(t) + 6) % 7);
-    $('bossCard').className = 'boss' + (b.defeated ? ' dead' : '');
-    $('bossCard').innerHTML = `<div class="boss-top">
-        <div class="boss-face" id="bossFace">${b.icon}</div>
-        <div style="flex:1;min-width:0">
-          <div class="muted" style="font-size:12px">今週のボス（${md(b.ws)}〜${md(addDays(b.ws, 6))}）</div>
-          <div style="font-weight:700;font-size:17px">${b.name}</div>
-        </div>
-        <div style="text-align:right;font-size:12px" class="muted">${b.defeated ? '<b style="color:var(--accent)">討伐済み！</b>' : `残り${daysLeft}日<br>報酬 <b class="gain">+${b.reward}XP</b>`}</div>
-      </div>
-      <div class="bar boss"><i style="width:${left / b.hp * 100}%"></i></div>
-      <div class="bar-label"><span>HP ${left} / ${b.hp}</span><span>${b.defeated ? `${md(b.defeated)} に撃破・報酬 +${b.reward}XP 獲得` : 'クエストで稼いだXPがダメージになる'}</span></div>`;
-  }
-
-  function renderToday(c) {
-    const k = todayKey();
-    $('todayLabel').textContent = `今日のクエスト（${md(k)} ${WD[dow(k)]}）`;
-    const entries = state.log[k] || {};
-    const sched = scheduledOn(k);
-    const day = c.perDay[k] || { done: 0, xp: 0 };
-    const count = sched.length;
-    $('todayProg').innerHTML = `${day.done} / ${count} クリア · <span class="gain">+${day.xp} XP</span>`;
-    const ratio = count ? day.done / count : 0;
-    $('dayBar').style.width = Math.min(100, ratio / CLEAR_RATIO * 100) + '%';
-    const toNext = FREEZE_EVERY - (c.streak % FREEZE_EVERY);
-    $('dayMsg').textContent = !count ? '😴 今日は休息日。予定クエストはありません'
-      : day.cleared ? `🎉 本日は達成日！ ${c.streak % FREEZE_EVERY === 0 ? '❄️凍結アイテムを獲得！' : `次の❄️まであと${toNext}日`}`
-      : `あと ${Math.max(0, Math.ceil(count * CLEAR_RATIO) - day.done)} 個クリアで「達成日」（${c.streak % FREEZE_EVERY === FREEZE_EVERY - 1 ? '❄️獲得！' : `次の❄️まであと${toNext}日`}）`;
-
-    const list = $('taskList');
-    if (!count) { list.innerHTML = '<p class="muted">設定でクエストや曜日を追加できます。</p>'; return; }
-    list.innerHTML = sched.map(t => {
-      const v = entries[t.id];
-      const comp = completion(t, v);
-      const gain = Math.round(t.xp * comp * c.mult);
-      let meta, ctrl;
-      if (t.type === 'check') {
-        meta = `${t.xp} XP`;
-        ctrl = `<button class="check" data-act="toggle" data-id="${t.id}" aria-label="完了">${v ? '✓' : ''}</button>`;
-      } else if (t.type === 'count') {
-        meta = `目標 ${t.target}${esc(t.unit || '')} · ${t.xp} XP`;
-        ctrl = `<input type="number" inputmode="decimal" min="0" step="any" data-act="count" data-id="${t.id}" value="${v ?? ''}" placeholder="0"><span class="muted">${esc(t.unit || '')}</span>
-                <button class="check" data-act="fill" data-id="${t.id}" aria-label="目標達成">${isDone(t, v) ? '✓' : ''}</button>`;
-      } else {
-        meta = `${t.wake} までに起床 · ${t.xp} XP`;
-        ctrl = `<input type="time" data-act="wake" data-id="${t.id}" value="${v ?? ''}">
-                <button class="check" data-act="now" data-id="${t.id}" aria-label="今起きた" title="今の時刻で記録">${v ? (comp >= 1 ? '✓' : comp > 0 ? '△' : '✗') : '⏰'}</button>`;
-      }
-      return `<div class="task ${comp >= 1 ? 'done' : ''}">
-        <div class="ic">${esc(t.icon)}</div>
-        <div class="body">
-          <div class="tn">${esc(t.name)}</div>
-          <div class="meta"><span class="tag t-${t.cat}">${CATS[t.cat].en}</span>${meta}${gain ? ` · <span class="gain">+${gain}</span>` : ''}</div>
-        </div>
-        <div class="ctrl">${ctrl}</div>
-      </div>`;
-    }).join('');
-  }
-
-  function renderStats(c, L) {
-    const max = Math.max(100, ...Object.values(c.cat));
-    $('statCard').innerHTML = Object.entries(CATS).map(([k, v]) => {
-      const pts = Math.floor(c.cat[k] / 10);
-      return `<div class="stat"><div><b>${v.en}</b> <span class="muted">${v.name}</span></div>
-        <div class="sbar"><i style="width:${c.cat[k] / max * 100}%;background:${v.color}"></i></div>
-        <div class="sv">${pts}</div></div>`;
-    }).join('');
-    $('kpis').innerHTML = [
-      ['現在の連続記録', `${c.streak}日`], ['最長連続記録', `${c.best}日`],
-      ['達成日 合計', `${c.clearedDays}日`], ['❄️ 所持 / 使用', `${c.freezes} / ${c.frozenDays}`],
-      ['⚔️ ボス討伐', `${c.bossWins}体`], ['☠️ 戦闘不能', `${c.knockouts}回`],
-    ].map(([k, v]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
-    $('titleList').innerHTML = TITLES.map(([lv, name]) =>
-      `<div style="display:flex;justify-content:space-between;padding:4px 0;${L.lv >= lv ? '' : 'opacity:.35'}">
-        <span>${L.lv >= lv ? '🏅' : '🔒'} ${name}</span><span class="muted">Lv ${lv}</span></div>`).join('');
-  }
-
-  function renderLog(c) {
-    const t = todayKey();
-    const end = addDays(t, 6 - dow(t));
-    const start = addDays(end, -34);
-    let html = WD.split('').map(w => `<div class="h">${w}</div>`).join('');
-    for (let i = 0; i < 35; i++) {
-      const k = addDays(start, i);
-      const p = c.perDay[k];
-      let bg = '#20253f', fg = '', mark = '';
-      if (p) {
-        if (p.status === 'cleared') { bg = p.done >= p.count ? '#5ee0a0' : '#2b9a6c'; fg = 'color:#0b2a1d;font-weight:700;'; }
-        else if (p.status === 'frozen') { bg = '#1e5a8a'; fg = 'color:#d0ebff;'; mark = '❄'; }
-        else if (p.status === 'damage') { bg = '#6b2635'; fg = 'color:#ffc9c9;'; }
-        else if (p.status === 'rest') { bg = '#2a2f4a'; }
-        else if (p.done) bg = '#1f5b45';
-      }
-      const future = k > t;
-      html += `<div class="d" title="${k}${p ? ` ${p.done}/${p.count} +${p.xp}XP HP${p.hp}` : ''}"
-        style="background:${bg};${fg}${future ? 'opacity:.25;' : ''}${k === t ? 'outline:2px solid var(--accent);' : ''}">${mark || parseKey(k).getDate()}</div>`;
-    }
-    $('cal').innerHTML = html;
-
-    const bl = Object.values(c.bosses).sort((a, b) => b.ws.localeCompare(a.ws)).slice(0, 6);
-    $('bossLog').innerHTML = bl.map(b => `<div class="card" style="display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:6px">
-      <span style="font-size:24px;${b.defeated ? '' : 'filter:grayscale(.2)'}">${b.icon}</span>
-      <span style="flex:1;min-width:0"><b>${b.name}</b><br><span class="muted">${md(b.ws)}週 · ${Math.min(b.dmg, b.hp)}/${b.hp} ダメージ</span></span>
-      <span>${b.defeated ? `<span class="gain">討伐 +${b.reward}</span>` : b.ws === weekStart(t) ? '<span class="muted">戦闘中</span>' : '<span style="color:var(--danger)">逃走</span>'}</span>
-    </div>`).join('');
-
-    // 起床時刻チャート
-    const wakeTask = state.tasks.find(x => x.type === 'wake');
-    const svg = $('wakeChart');
-    if (!wakeTask) { svg.innerHTML = '<text x="160" y="70" fill="#8d93b8" font-size="12" text-anchor="middle">起床クエストがありません</text>'; }
-    else {
-      const pts = [];
-      for (let i = 13; i >= 0; i--) {
-        const k = addDays(t, -i);
-        const v = state.log[k]?.[wakeTask.id];
-        pts.push({ k, m: v ? toMin(v) : null });
-      }
-      const goal = toMin(wakeTask.wake);
-      const vals = pts.filter(p => p.m != null).map(p => p.m).concat(goal);
-      const lo = Math.floor((Math.min(...vals) - 30) / 60) * 60, hi = Math.ceil((Math.max(...vals) + 30) / 60) * 60;
-      const X = i => 30 + i * (280 / 13), Y = m => 10 + (m - lo) / (hi - lo) * 110;
-      let s = '';
-      const step = hi - lo > 360 ? 120 : 60;
-      for (let h = lo; h <= hi; h += step) s += `<line x1="30" x2="310" y1="${Y(h)}" y2="${Y(h)}" stroke="#2c3256"/><text x="24" y="${Y(h) + 4}" fill="#8d93b8" font-size="10" text-anchor="end">${h / 60}時</text>`;
-      s += `<line x1="30" x2="310" y1="${Y(goal)}" y2="${Y(goal)}" stroke="#ffcc4d" stroke-dasharray="4 3"/><text x="310" y="${Y(goal) - 3}" fill="#ffcc4d" font-size="9" text-anchor="end">目標 ${wakeTask.wake}</text>`;
-      let path = '', pen = false;
-      pts.forEach((p, i) => { if (p.m == null) { pen = false; return; } path += (pen ? 'L' : 'M') + `${X(i)},${Y(p.m)}`; pen = true; });
-      if (path) s += `<path d="${path}" fill="none" stroke="#5ee0a0" stroke-width="2"/>`;
-      pts.forEach((p, i) => { if (p.m != null) s += `<circle cx="${X(i)}" cy="${Y(p.m)}" r="3.5" fill="${p.m <= goal ? '#5ee0a0' : '#ff6b6b'}"><title>${p.k} ${Math.floor(p.m / 60)}:${pad(p.m % 60)}</title></circle>`; });
-      s += `<text x="30" y="136" fill="#8d93b8" font-size="9">${md(pts[0].k)}</text><text x="310" y="136" fill="#8d93b8" font-size="9" text-anchor="end">今日</text>`;
-      svg.innerHTML = s;
-    }
-
-    const ev = c.events.slice(-12).reverse();
-    $('recent').innerHTML = ev.length
-      ? ev.map(e => `<div class="ev"><span class="dt">${md(e.k)}</span><span>${e.icon} ${esc(e.text)}</span></div>`).join('')
-      : '<p class="muted" style="margin:0">まだ出来事はありません。今日のクエストから始めよう！</p>';
-  }
-
-  function renderSettings() {
-    if (document.activeElement !== $('nameInput')) $('nameInput').value = state.name;
-    $('editList').innerHTML = state.tasks.map((t, i) => {
-      const days = t.days.length === 7 ? '毎日' : ALL_DAYS.filter(d => t.days.includes(d)).map(d => WD[d]).join('');
-      return `<div class="edit-row">
-      <span style="font-size:20px">${esc(t.icon)}</span>
-      <span class="tn">${esc(t.name)}<br><span class="tag t-${t.cat}">${CATS[t.cat].en}</span><span class="muted">${t.xp}XP · ${days}</span></span>
-      <button class="btn sm" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
-      <button class="btn sm" data-act="edit" data-i="${i}">編集</button>
-      <button class="btn sm danger" data-act="del" data-i="${i}">削除</button>
-    </div>`; }).join('') || '<p class="muted">クエストがありません</p>';
-    const n = state.notify;
-    $('notifyBtn').textContent = n.on ? 'ON' : 'OFF';
-    $('notifyBtn').className = 'btn sm' + (n.on ? ' primary' : '');
-    if (document.activeElement !== $('nMorning')) $('nMorning').value = n.morning;
-    if (document.activeElement !== $('nEvening')) $('nEvening').value = n.evening;
-  }
-
-  // ---------- actions ----------
-  function setEntry(id, v) {
-    const k = todayKey();
-    const t = state.tasks.find(x => x.id === id);
-    const before = C || compute();
-    state.log[k] = state.log[k] || {};
-    if (v === null || v === '' || v === false) delete state.log[k][id]; else state.log[k][id] = v;
-    if (!Object.keys(state.log[k]).length) delete state.log[k];
-    save();
-    const after = compute();
-    const diff = after.total - before.total;
-    if (after.freezes > before.freezes) toast(`❄️ 凍結アイテム獲得！（所持 ${after.freezes}）`, 'ice');
-    else if (after.bossWins > before.bossWins) toast(`⚔️ ${after.boss.name} を討伐！ +${after.boss.reward} XP`, 'boss');
-    else if (diff > 0) toast(`${t.icon} +${diff} XP`);
-    render();
-    if (diff > 0) { const f = $('bossFace'); if (f) { f.classList.remove('hit'); void f.offsetWidth; f.classList.add('hit'); } }
-  }
-  function toast(msg, cls = '') {
-    const el = document.createElement('div');
-    el.className = 'toast ' + cls; el.textContent = msg;
-    document.body.appendChild(el); setTimeout(() => el.remove(), 1900);
-  }
-
-  $('taskList').addEventListener('click', e => {
-    const b = e.target.closest('button[data-act]'); if (!b) return;
-    const id = b.dataset.id, t = state.tasks.find(x => x.id === id);
-    const cur = (state.log[todayKey()] || {})[id];
-    if (b.dataset.act === 'toggle') setEntry(id, !cur);
-    if (b.dataset.act === 'fill') setEntry(id, isDone(t, cur) ? null : t.target);
-    if (b.dataset.act === 'now') {
-      if (cur) setEntry(id, null);
-      else { const d = new Date(); setEntry(id, `${pad(d.getHours())}:${pad(d.getMinutes())}`); }
-    }
-  });
-  $('taskList').addEventListener('change', e => {
-    const el = e.target; if (!el.dataset.act) return;
-    if (el.dataset.act === 'count') setEntry(el.dataset.id, el.value === '' ? null : Number(el.value));
-    if (el.dataset.act === 'wake') setEntry(el.dataset.id, el.value || null);
-  });
-
-  document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
-    document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
-    ['today', 'stats', 'log', 'settings'].forEach(n => $('tab-' + n).classList.toggle('hidden', n !== b.dataset.tab));
-    window.scrollTo(0, 0);
-  }));
-  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('.modal').classList.add('hidden')));
-  $('nameInput').addEventListener('input', e => { state.name = e.target.value.trim() || '冒険者'; save(); $('heroName').textContent = state.name; });
-
-  // task editor
-  let editing = -1, formDays = ALL_DAYS.slice();
-  function renderDays() {
-    $('fDays').innerHTML = [1, 2, 3, 4, 5, 6, 0].map(d =>
-      `<button type="button" data-d="${d}" class="${formDays.includes(d) ? 'on' : ''}">${WD[d]}</button>`).join('');
-  }
-  $('fDays').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    const d = Number(b.dataset.d);
-    formDays = formDays.includes(d) ? formDays.filter(x => x !== d) : formDays.concat(d);
-    renderDays();
-  });
-  function openForm(i) {
-    editing = i;
-    const t = i >= 0 ? state.tasks[i] : { icon: '⭐', name: '', type: 'check', cat: 'str', xp: 20, target: 30, unit: '回', wake: '06:00', days: ALL_DAYS };
-    $('formTitle').textContent = i >= 0 ? 'クエストを編集' : 'クエストを追加';
-    $('fIcon').value = t.icon; $('fName').value = t.name; $('fType').value = t.type; $('fCat').value = t.cat;
-    $('fXp').value = t.xp; $('fTarget').value = t.target ?? 30; $('fUnit').value = t.unit ?? '回'; $('fWake').value = t.wake ?? '06:00';
-    formDays = t.days.slice(); renderDays();
-    syncForm();
-    $('taskForm').classList.remove('hidden');
-    $('taskForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  function syncForm() {
-    $('fTargetRow').classList.toggle('hidden', $('fType').value !== 'count');
-    $('fWakeRow').classList.toggle('hidden', $('fType').value !== 'wake');
-  }
-  $('fType').addEventListener('change', syncForm);
-  $('addBtn').addEventListener('click', () => openForm(-1));
-  $('cancelBtn').addEventListener('click', () => $('taskForm').classList.add('hidden'));
-  $('saveBtn').addEventListener('click', () => {
-    const name = $('fName').value.trim();
-    if (!name) { $('fName').focus(); return; }
-    if (!formDays.length) { alert('曜日を1つ以上選んでください'); return; }
-    const t = {
-      id: editing >= 0 ? state.tasks[editing].id : uid(),
-      icon: $('fIcon').value.trim() || '⭐', name, type: $('fType').value, cat: $('fCat').value,
-      xp: Math.max(1, Math.min(500, Number($('fXp').value) || 10)), days: formDays.slice().sort(),
-    };
-    if (t.type === 'count') { t.target = Math.max(0.1, Number($('fTarget').value) || 1); t.unit = $('fUnit').value.trim(); }
-    if (t.type === 'wake') t.wake = $('fWake').value || '06:00';
-    if (editing >= 0) state.tasks[editing] = t; else state.tasks.push(t);
-    save(); $('taskForm').classList.add('hidden'); render();
-  });
-  $('editList').addEventListener('click', e => {
-    const b = e.target.closest('button[data-act]'); if (!b) return;
-    const i = Number(b.dataset.i);
-    if (b.dataset.act === 'edit') openForm(i);
-    if (b.dataset.act === 'up' && i > 0) { [state.tasks[i - 1], state.tasks[i]] = [state.tasks[i], state.tasks[i - 1]]; save(); render(); }
-    if (b.dataset.act === 'del' && confirm(`「${state.tasks[i].name}」を削除しますか？\n（このクエストで得たXPも消え、過去の達成判定も再計算されます）`)) {
-      state.tasks.splice(i, 1); save(); render();
-    }
-  });
-
-  // ---------- reminders ----------
-  const canNotify = () => 'Notification' in window;
-  $('notifyBtn').addEventListener('click', async () => {
-    if (state.notify.on) { state.notify.on = false; save(); render(); return; }
-    if (!canNotify()) { alert('このブラウザは通知に対応していません。カレンダー登録をご利用ください。'); return; }
-    const p = await Notification.requestPermission();
-    if (p !== 'granted') { alert('通知が許可されませんでした。ブラウザの設定から許可してください。'); return; }
-    state.notify.on = true;
-    // 今日すでに過ぎた時刻の通知はスキップ
-    const now = new Date(), hm = now.getHours() * 60 + now.getMinutes();
-    ['morning', 'evening'].forEach(type => { if (hm >= toMin(state.notify[type])) state.notify.sent[type] = todayKey(); });
-    save(); render();
-    notify('Life Quest', '通知をONにしました ⚔️');
-  });
-  ['nMorning', 'nEvening'].forEach((id, i) => $(id).addEventListener('change', e => {
-    const type = i ? 'evening' : 'morning';
-    state.notify[type] = e.target.value || (i ? '21:00' : '07:00');
-    delete state.notify.sent[type]; save();
-  }));
-  function notify(title, body) {
-    const opts = { body, tag: 'life-quest', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' };
-    // PWA（特にAndroid/iOS）では Service Worker 経由でないと通知を出せない
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(r => r.showNotification(title, opts)).catch(() => {});
-      return;
-    }
-    try { new Notification(title, opts); } catch (e) {}
-  }
-  function checkNotify() {
-    const n = state.notify;
-    if (!n.on || !canNotify() || Notification.permission !== 'granted') return;
-    const now = new Date(), hm = now.getHours() * 60 + now.getMinutes(), k = todayKey();
-    const c = C || compute();
-    const sched = scheduledOn(k), day = c.perDay[k] || { done: 0 };
-    for (const type of ['morning', 'evening']) {
-      const at = toMin(n[type]);
-      if (n.sent[type] === k || hm < at || hm > at + 120) continue;   // 指定時刻から2時間以内のみ
-      n.sent[type] = k; save();
-      if (type === 'morning') {
-        notify('⚔️ 今日のクエスト', sched.length
-          ? `${sched.length}個のクエストが待っています。ボス「${c.boss.name}」残りHP ${Math.max(0, c.boss.hp - c.boss.dmg)}`
-          : '今日は休息日です');
-      } else if (sched.length && !day.cleared) {
-        const left = Math.ceil(sched.length * CLEAR_RATIO) - day.done;
-        notify('⏳ まだ間に合う！', `あと${left}個で達成日。${c.freezes ? `未達成なら❄️を1個消費します` : `未達成だとHPダメージ（現在HP ${c.hp}）`}`);
-      }
-    }
-  }
-  $('icsBtn').addEventListener('click', () => {
-    const t = parseKey(addDays(todayKey(), 1));
-    const ymd = `${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}`;
-    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-    const ev = (id, time, summary, desc) => [
-      'BEGIN:VEVENT', `UID:lifequest-${id}-${uid()}@lifequest.local`, `DTSTAMP:${stamp}`,
-      `DTSTART:${ymd}T${time.replace(':', '')}00`, 'DURATION:PT10M', 'RRULE:FREQ=DAILY',
-      `SUMMARY:${summary}`, `DESCRIPTION:${desc}`,
-      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${summary}`, 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT'];
-    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Life Quest//JA', 'CALSCALE:GREGORIAN',
-      ...ev('morning', state.notify.morning, '⚔️ Life Quest：今日のクエスト', 'アプリを開いて今日のクエストを確認しよう'),
-      ...ev('evening', state.notify.evening, '⏳ Life Quest：やり残しチェック', '達成日まであと何個？ 未達成だとHPダメージ'),
-      'END:VCALENDAR'];
-    download(new Blob([lines.join('\r\n')], { type: 'text/calendar' }), 'life-quest-reminder.ics');
-  });
-  function download(blob, name) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = name; a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
-
-  // ---------- data ----------
-  $('exportBtn').addEventListener('click', () =>
-    download(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }), `life-quest-${todayKey()}.json`));
-  $('importBtn').addEventListener('click', () => $('importFile').click());
-  $('importFile').addEventListener('change', async e => {
-    const f = e.target.files[0]; if (!f) return;
-    try {
-      const s = JSON.parse(await f.text());
-      if (!Array.isArray(s.tasks) || typeof s.log !== 'object') throw 0;
-      state = migrate(s); state.seenUntil = addDays(todayKey(), -1); save(); render(); toast('インポートしました');
-    } catch (err) { alert('ファイルを読み込めませんでした'); }
-    e.target.value = '';
-  });
-  $('resetBtn').addEventListener('click', () => {
-    if (confirm('すべての記録とクエストを初期状態に戻します。よろしいですか？')) { state = freshState(); save(); render(); }
-  });
-
-  let lastKey = todayKey();
-  setInterval(() => {
-    if (todayKey() !== lastKey) { lastKey = todayKey(); render(); }
-    checkNotify();
-  }, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { render(); checkNotify(); } });
-
-  // ---------- PWA ----------
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW登録失敗', err));
-  }
-  let installEvt = null;
-  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  function renderInstall() {
-    const msg = $('installMsg'), btn = $('installBtn');
-    btn.classList.toggle('hidden', !installEvt || standalone());
-    if (standalone()) msg.textContent = '✅ アプリとしてインストール済みです。オフラインでも使えます。';
-    else if (installEvt) msg.textContent = 'ホーム画面に追加すると、アプリのように全画面で起動でき、オフラインでも使えます。';
-    else if (isIOS) msg.innerHTML = 'Safari の共有ボタン <b>⬆️</b> →「<b>ホーム画面に追加</b>」でインストールできます。通知を使うにはインストールが必要です。';
-    else msg.textContent = 'ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。';
-  }
-  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; renderInstall(); });
-  window.addEventListener('appinstalled', () => { installEvt = null; renderInstall(); toast('📲 インストールしました'); });
-  $('installBtn').addEventListener('click', async () => {
-    if (!installEvt) return;
-    installEvt.prompt();
-    await installEvt.userChoice.catch(() => {});
-    installEvt = null; renderInstall();
-  });
-  renderInstall();
-
-  state.lastLevel = state.lastLevel || levelOf(compute().total).lv;
-  save();
-  render();
-  checkNotify();
-})();
-</script>
+<script src="js/sprites.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
