@@ -155,44 +155,88 @@
     return { lv, rest, need: need(lv) };
   }
   const titleOf = lv => TITLES.filter(t => lv >= t[0]).pop()[1];
-  const bossIdx = ws => Math.floor(parseKey(ws).getTime() / (7 * 864e5)) % S.BOSSES.length;
-  function bossFor(ws, byId) {
-    let hp = 0;
+  // ---------- 乱数（日付から決まるので、何度計算しても同じ結果になる） ----------
+  function hash(str) { let x = 2166136261; for (let i = 0; i < str.length; i++) x = Math.imul(x ^ str.charCodeAt(i), 16777619); return x >>> 0; }
+  // 今日のボーナス：その日のクエストのうち1つが EXP2倍
+  const bonusIdOf = (k, ids) => ids.length ? ids.slice().sort()[hash('bonus' + k) % ids.length] : null;
+  // 会心の一撃：完了したクエストの15%でボスへのダメージ2倍
+  const isCrit = (k, id) => hash('crit' + k + id) % 100 < 15;
+
+  // ---------- 実績 ----------
+  // [キー, 名前, 数える値, 目標, 報酬G]
+  const ACH = [
+    ['streak3', '3日連続で達成', 'best', 3, 50], ['streak7', '7日連続で達成', 'best', 7, 100],
+    ['streak14', '14日連続で達成', 'best', 14, 200], ['streak30', '30日連続で達成', 'best', 30, 500],
+    ['streak100', '100日連続で達成', 'best', 100, 2000],
+    ['clear10', '達成日数 10日', 'clearedDays', 10, 100], ['clear50', '達成日数 50日', 'clearedDays', 50, 300],
+    ['clear100', '達成日数 100日', 'clearedDays', 100, 800],
+    ['perfect1', '初めての全クリア', 'perfect', 1, 50], ['perfect10', '全クリア 10回', 'perfect', 10, 200],
+    ['perfect50', '全クリア 50回', 'perfect', 50, 600],
+    ['boss1', '初めてのボス討伐', 'bossWins', 1, 100], ['boss5', 'ボス討伐 5体', 'bossWins', 5, 300],
+    ['boss20', 'ボス討伐 20体', 'bossWins', 20, 1000],
+    ['wake10', '早起き 10回', 'wakes', 10, 100], ['wake50', '早起き 50回', 'wakes', 50, 400],
+    ['reps1000', '累計 1,000回', 'reps', 1000, 200], ['reps10000', '累計 10,000回', 'reps', 10000, 1000],
+    ['lv5', 'Lv5に到達', 'lv', 5, 100], ['lv10', 'Lv10に到達', 'lv', 10, 300], ['lv20', 'Lv20に到達', 'lv', 20, 800],
+    ['buy1', '初めての買い物', 'buys', 1, 50], ['set1', '革・銅の装備を全部位そろえる', 'tierSet', 1, 300],
+    ['set2', '鉄の装備を全部位そろえる', 'tierSet', 2, 600], ['set3', '騎士の装備を全部位そろえる', 'tierSet', 3, 1500],
+  ].map(([key, name, stat, goal, reward]) => ({ key, name, stat, goal, reward }));
+  // その日までに持っている装備で、全部位がそろっている段階
+  function tierSetOn(k) {
+    const best = { head: 0, chest: 0, legs: 0, feet: 0, sword: 0, shield: 0 };
+    state.buys.forEach(b => { if (b.k <= k) { const x = G.get(b.id); if (x) best[x.slot] = Math.max(best[x.slot], x.tier); } });
+    return Math.min(...Object.values(best));
+  }
+
+  // ---------- ボス ----------
+  // 開始から何週目かで決まる。弱い順に1体ずつ登場し、週を重ねるほどHPと報酬が上がる。20体で一巡すると強化版
+  function bossFor(ws, byId, firstWs) {
+    const n = Math.max(0, Math.round(daysBetween(firstWs, ws) / 7));
+    let base = 0;
     for (let i = 0; i < 7; i++) {
       const k = addDays(ws, i);
       if (k < state.start) continue;
-      hp += schedIds(k).reduce((a, id) => a + (byId[id] ? byId[id].xp : 0), 0);
+      base += schedIds(k).reduce((a, id) => a + (byId[id] ? byId[id].xp : 0), 0);
     }
-    hp = Math.max(50, Math.round(hp * 0.7));
-    const idx = bossIdx(ws);
-    return { ws, idx, name: S.BOSSES[idx].name, hp, dmg: 0, defeated: null, reward: Math.round(hp * 0.3) };
+    const scale = Math.min(2, 1 + 0.04 * n);
+    const hp = Math.max(50, Math.round(base * 0.7 * scale));
+    const idx = S.BOSS_ORDER[n % S.BOSS_ORDER.length];
+    const loop = Math.floor(n / S.BOSS_ORDER.length);
+    return { ws, n, idx, name: (loop ? '強化・' : '') + S.BOSSES[idx].name, hp, dmg: 0, defeated: null,
+      reward: Math.round(hp * 0.3), gold: GOLD_BOSS + 10 * Math.min(n, 40) };
   }
+
+  // 開始日から今日まで1日ずつ再生して、すべての数値を計算する
   function compute() {
     const tKey = todayKey();
     const byId = Object.fromEntries(state.tasks.map(t => [t.id, t]));
     const cat = { str: 0, int: 0, mnd: 0, vit: 0 };
-    const perDay = {}, events = [], bosses = {};
-    let total = 0, hp = MAX_HP, streak = 0, best = 0, freezes = 0;
-    let clearedDays = 0, frozenDays = 0, knockouts = 0, bossWins = 0, boss = null;
+    const perDay = {}, events = [], bosses = {}, ach = {};
+    let total = 0, hp = MAX_HP, streak = 0, freezes = 0, boss = null;
     let earned = 0, maxHp = MAX_HP, lvNow = 1;
+    const st = { best: 0, clearedDays: 0, perfect: 0, bossWins: 0, wakes: 0, reps: 0, lv: 1, buys: 0, tierSet: 0, frozenDays: 0, knockouts: 0 };
     let first = state.start;
     const logFirst = Object.keys(state.log).sort()[0];
     if (logFirst && logFirst < first) first = logFirst;
+    const firstWs = weekStart(first);
     for (let k = first; k <= tKey; k = addDays(k, 1)) {
       const ws = weekStart(k);
-      if (!boss || boss.ws !== ws) { boss = bossFor(ws, byId); bosses[ws] = boss; }
+      if (!boss || boss.ws !== ws) { boss = bossFor(ws, byId, firstWs); bosses[ws] = boss; }
       const entries = state.log[k] || {};
       const ids = schedIds(k).filter(id => byId[id]);
+      const bonusId = bonusIdOf(k, ids);
       const mult = bonusFor(streak);
       const gs = G.stats(gearOn(k));
       maxHp = MAX_HP + gs.hp; hp = Math.min(hp, maxHp);
-      let dayXp = 0, done = 0, dayGold = 0;
+      let dayXp = 0, done = 0, dayGold = 0, bossDmg = 0;
       for (const id in entries) {
         const t = byId[id]; if (!t) continue;
         const c = completion(t, entries[id]);
-        const g = Math.round(t.xp * c * mult);
+        const g = Math.round(t.xp * c * mult * (id === bonusId ? 2 : 1));
         dayXp += g; cat[t.cat] += g;
+        bossDmg += Math.round(g * (1 + gs.atk / 100) * (c >= 1 && isCrit(k, id) ? 2 : 1));
         if (c >= 1 && ids.includes(id)) done++;
+        if (t.type === 'wake' && c >= 1) st.wakes++;
+        if (t.type === 'count' && t.unit === '回') st.reps += Number(entries[id]) || 0;
       }
       const count = ids.length, recorded = Object.keys(entries).length > 0;
       const cleared = count > 0 && done >= needFor(count);
@@ -200,44 +244,52 @@
       total += dayXp;
       if (count === 0) status = 'rest';
       else if (cleared) {
-        status = 'cleared'; streak++; clearedDays++; best = Math.max(best, streak);
+        status = 'cleared'; streak++; st.clearedDays++; st.best = Math.max(st.best, streak);
+        if (done >= count) st.perfect++;
         hp = Math.min(maxHp, hp + HEAL);
         dayGold += GOLD_PER_CLEAR;
         if (streak % FREEZE_EVERY === 0) { freezes++; events.push({ k, icon: '❄', title: '氷のお守りを手に入れた', text: `${streak}日連続で達成！ 氷のお守りを手に入れた（所持 ${freezes}個）` }); }
       } else if (k === tKey) status = 'pending';
       else if (freezes > 0) {
-        freezes--; frozenDays++; status = 'frozen';
+        freezes--; st.frozenDays++; status = 'frozen';
         events.push({ k, icon: '🧊', title: '氷のお守りが身を守った', text: `未達成だったが、氷のお守りが身を守った。連続${streak}日は継続（残り ${freezes}個）` });
       } else {
         const dmg = Math.round((recorded ? DMG_PARTIAL : DMG_NONE) * (1 - gs.def / 100));
         hp -= dmg; status = 'damage';
         const lost = streak; streak = 0;
-        events.push({ k, icon: '💥', title: `${dmg}のダメージ`, text: `${recorded ? '未達成' : '記録なし'}… HPが${Math.max(0, hp)}に減った。${lost ? `連続${lost}日が途切れた。` : ''}` });
+        events.push({ k, icon: '💥', title: `${boss.name}の攻撃 ${dmg}ダメージ`, text: `${recorded ? '未達成' : '記録なし'}の隙を突かれた… HPが${Math.max(0, hp)}に減った。${lost ? `連続${lost}日が途切れた。` : ''}` });
         if (hp <= 0) {
           const L = levelOf(total), lostXp = Math.floor(L.rest / 2);
-          total -= lostXp; hp = maxHp; knockouts++;
+          total -= lostXp; hp = maxHp; st.knockouts++;
           events.push({ k, icon: '☠', title: '戦闘不能', text: `力尽きた… ${lostXp}EXPを失った。HPは全回復した。` });
         }
       }
-      const bossDmg = Math.round(dayXp * (1 + gs.atk / 100));
       boss.dmg += bossDmg;
       if (!boss.defeated && boss.dmg >= boss.hp) {
-        boss.defeated = k; total += boss.reward; bossWins++; dayGold += GOLD_BOSS;
-        events.push({ k, icon: '⚔', title: 'ボスを倒した', text: `${boss.name}を倒した！ ${boss.reward}EXPと${GOLD_BOSS}Gを獲得！` });
+        boss.defeated = k; total += boss.reward; st.bossWins++; dayGold += boss.gold;
+        events.push({ k, icon: '⚔', title: `${boss.name}を倒した`, text: `${boss.reward}EXPと${boss.gold}Gを獲得！` });
       }
-      // ゴールド：獲得EXPの半分＋達成ボーナス＋ボス＋レベルアップ
       dayGold += Math.round(dayXp / 2);
       const lvEnd = levelOf(total).lv;
       if (lvEnd > lvNow) dayGold += (lvEnd - lvNow) * GOLD_LEVEL;
       lvNow = Math.max(lvNow, lvEnd);
+      st.lv = lvNow;
+      st.buys = state.buys.filter(b => b.k <= k).length;
+      st.tierSet = tierSetOn(k);
+      ACH.forEach(a => {
+        if (!ach[a.key] && st[a.stat] >= a.goal) {
+          ach[a.key] = k; dayGold += a.reward;
+          events.push({ k, icon: '🏆', title: `実績「${a.name}」`, text: `実績を達成した！ 報酬 ${a.reward}G` });
+        }
+      });
       earned += dayGold;
-      perDay[k] = { xp: dayXp, done, count, cleared, mult, status, hp, recorded, bossDmg, gold: dayGold };
+      perDay[k] = { xp: dayXp, done, count, cleared, mult, status, hp, recorded, bossDmg, gold: dayGold, bonusId };
     }
     const today = perDay[tKey];
     const spent = state.buys.reduce((a, b) => a + b.price, 0);
-    return { total, cat, perDay, events, bosses, boss: bosses[weekStart(tKey)], streak, best, freezes, hp, maxHp,
-      clearedDays, frozenDays, knockouts, bossWins, mult: today ? today.mult : bonusFor(streak),
-      earned, gold: earned - spent, gearStats: G.stats(gearOn(tKey)) };
+    return { total, cat, perDay, events, bosses, boss: bosses[weekStart(tKey)], streak, best: st.best, freezes, hp, maxHp,
+      clearedDays: st.clearedDays, frozenDays: st.frozenDays, knockouts: st.knockouts, bossWins: st.bossWins, st, ach,
+      mult: today ? today.mult : bonusFor(streak), earned, gold: earned - spent, gearStats: G.stats(gearOn(tKey)) };
   }
 
   // ---------- サウンド・振動 ----------
@@ -349,13 +401,16 @@
       <li>毎週月曜にボスが出現。稼いだEXPがそのままダメージになる</li>
       <li>早起きは30分以内の遅れならEXP半分</li>
       <li>回数を増やすと獲得EXPも増える</li>
-      <li>ゴールド：獲得EXPの半分＋達成で${GOLD_PER_CLEAR}G＋ボス討伐で${GOLD_BOSS}G＋レベルアップで${GOLD_LEVEL}G</li>
+      <li>ゴールド：獲得EXPの半分＋達成で${GOLD_PER_CLEAR}G＋ボス討伐で${GOLD_BOSS}G〜＋レベルアップで${GOLD_LEVEL}G＋実績の報酬</li>
+      <li>毎日クエストの1つが<span class="y">★EXP2倍</span>になる</li>
+      <li>クエストを完了すると、たまに<span class="y">会心の一撃</span>（ボスへのダメージ2倍）が出る</li>
+      <li>ボスは全20体。週を重ねるほど強くなり、報酬も増える</li>
       <li>ショップで装備を買える。兜・ブーツ・剣はボスへのダメージ、鎧・レギンス・盾は最大HPや被ダメージ軽減</li>
       <li>日付の切り替えは午前3時</li></ul>`);
   }
 
   // ---------- 描画 ----------
-  let C = null;
+  let C = null, knownAch = null;
   function render() {
     const tKey = todayKey();
     const ids = currentIdsFor(tKey);
@@ -376,6 +431,13 @@
     $('freezeNum').textContent = c.freezes;
     $('multNum').textContent = c.mult.toFixed(2);
     renderBoss(c); renderToday(c, L); renderStats(c, L); renderShop(c); renderLog(c); renderBadge();
+    // 新しく達成した実績を知らせる
+    const got = Object.keys(c.ach);
+    if (knownAch) got.filter(k2 => !knownAch.has(k2)).forEach((k2, i) => {
+      const a = ACH.find(x => x.key === k2);
+      setTimeout(() => { toast(`🏆 実績「${a.name}」 +${a.reward}G`); SFX.freeze(); }, 600 + i * 900);
+    });
+    knownAch = new Set(got);
     if (L.lv > (state.lastLevel || 1)) levelUp(state.lastLevel || 1, L.lv, c);
     if (L.lv !== state.lastLevel) { state.lastLevel = L.lv; save(); }
     collectNews(c);
@@ -406,9 +468,9 @@
     $('bossCard').classList.toggle('dead', !!b.defeated);
     $('bossCard').innerHTML = `<div id="bossPic">${S.boss(b.idx, 52)}</div>
       <div class="grow">
-        <div style="display:flex;justify-content:space-between;gap:8px"><span>${b.name}</span><span class="dim">${b.defeated ? '<span class="y">討伐済み</span>' : daysLeft ? `残り${daysLeft}日` : '今日まで'}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px"><span><span class="dim">${b.n + 1}体目</span> ${b.name}</span><span class="dim">${b.defeated ? '<span class="y">討伐済み</span>' : daysLeft ? `残り${daysLeft}日` : '今日まで'}</span></div>
         <div class="bar boss"><i style="width:${left / b.hp * 100}%"></i></div>
-        <div class="dim">${b.defeated ? `報酬 ＋${b.reward}EXP 獲得` : `HP ${left}/${b.hp}`}</div>
+        <div class="dim">${b.defeated ? `報酬 ＋${b.reward}EXP ＋${b.gold}G 獲得` : `HP ${left}/${b.hp} ・ 報酬 ${b.reward}EXP ${b.gold}G`}</div>
       </div>`;
   }
 
@@ -418,6 +480,7 @@
     const tasks = currentIdsFor(k).map(id => state.tasks.find(t => t.id === id));
     const day = c.perDay[k] || { done: 0, recorded: false };
     const count = tasks.length;
+    const bonusId = day.bonusId !== undefined ? day.bonusId : bonusIdOf(k, tasks.map(t => t.id));
     $('todayProg').textContent = count ? `${day.done}/${count}` : '';
     if (!count) {
       $('taskList').innerHTML = `<div class="dim" style="padding:8px 0">${activeTasks().length ? '今日は休みです。' : 'クエストがありません。'}</div>
@@ -425,13 +488,14 @@
     } else {
       $('taskList').innerHTML = tasks.map(t => {
         const v = entries[t.id], comp = completion(t, v), done = comp >= 1;
+        const isBonus = t.id === bonusId, xpShow = t.xp * (isBonus ? 2 : 1);
         let sub = '', act = '', extra = '';
         if (t.type === 'check' || t.type === 'bed') {
-          sub = `＋${t.xp}EXP`;
+          sub = `＋${xpShow}EXP`;
           act = done ? `<button class="btn green act" data-act="toggle" data-id="${t.id}">✓ クリア</button>`
             : `<button class="btn act" data-act="toggle" data-id="${t.id}">やった！</button>`;
         } else if (t.type === 'count') {
-          sub = `${fmt(t.target)}${esc(t.unit)} ・ ＋${t.xp}EXP`;
+          sub = `${fmt(t.target)}${esc(t.unit)} ・ ＋${xpShow}EXP`;
           act = done ? `<button class="btn green act" data-act="fill" data-id="${t.id}">✓ クリア</button>`
             : `<button class="btn act" data-act="fill" data-id="${t.id}">完了</button>`;
           extra = `<div class="counter">
@@ -440,13 +504,13 @@
             <button class="btn gray" data-act="plus" data-id="${t.id}" aria-label="増やす">＋${fmt(t.step)}</button>
             <button class="btn sm gray" data-act="editCount" data-id="${t.id}" aria-label="数値を入力">✎</button></div>`;
         } else {
-          sub = `${t.wake}までに起床 ・ ＋${t.xp}EXP`;
+          sub = `${t.wake}までに起床 ・ ＋${xpShow}EXP`;
           act = v ? `<button class="btn ${done ? 'green' : 'gray'} act" data-act="editWake" data-id="${t.id}">${done ? '✓' : comp > 0 ? '△' : '✗'} ${v}</button>`
             : `<button class="btn act" data-act="now" data-id="${t.id}">起きた！</button>`;
         }
         return `<div class="task ${done ? 'done' : ''}"><div class="top-row">
           <div class="ic">${iconHtml(t.icon)}</div>
-          <div class="grow"><div class="tn">${esc(taskName(t))}</div><div class="sub">${sub}</div></div>
+          <div class="grow"><div class="tn">${esc(taskName(t))}${isBonus ? ' <span class="bonus">★EXP2倍</span>' : ''}</div><div class="sub">${sub}</div></div>
           ${act}</div>${extra}</div>`;
       }).join('');
     }
@@ -485,6 +549,16 @@
       ['☠ 戦闘不能', `${c.knockouts}回`], ['累計EXP', c.total.toLocaleString()],
     ].map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('');
   }
+  $('achBtn').addEventListener('click', () => {
+    SFX.tap();
+    const got = Object.keys(C.ach).length;
+    openSheet(`実績（${got}/${ACH.length}）`, ACH.map(a => {
+      const when = C.ach[a.key], cur = Math.min(C.st[a.stat], a.goal);
+      return `<div class="ach ${when ? 'got' : ''}"><span class="ai">${when ? '🏆' : '・'}</span>
+        <span class="grow">${a.name}<br><span class="dim">${when ? `${md(when)} 達成` : `${fmt(cur)} / ${fmt(a.goal)}`}</span></span>
+        <span class="${when ? 'dim' : 'y'}">${a.reward}G</span></div>`;
+    }).join(''));
+  });
   $('titlesBtn').addEventListener('click', () => {
     SFX.tap();
     const lv = levelOf(C.total).lv;
@@ -512,7 +586,7 @@
     const wins = Array(S.BOSSES.length).fill(0), seen = Array(S.BOSSES.length).fill(false);
     Object.values(c.bosses).forEach(b => { seen[b.idx] = true; if (b.defeated) wins[b.idx]++; });
     $('dexCount').textContent = `${wins.filter(Boolean).length}/${S.BOSSES.length}`;
-    $('dex').innerHTML = S.BOSSES.map((b, i) => `<div>${S.boss(i, 42, !wins[i])}<div class="${wins[i] ? 'n' : ''}">${wins[i] ? b.name : seen[i] ? '？？？' : '・・・'}</div>${wins[i] > 1 ? `<div class="y">×${wins[i]}</div>` : ''}</div>`).join('');
+    $('dex').innerHTML = S.BOSS_ORDER.map((i, no) => `<div><div class="dim">No.${no + 1}</div>${S.boss(i, 42, !wins[i])}<div class="${wins[i] ? 'n' : ''}">${wins[i] ? S.BOSSES[i].name : seen[i] ? '？？？' : '・・・'}</div>${wins[i] > 1 ? `<div class="y">×${wins[i]}</div>` : ''}</div>`).join('');
 
     const wakeTask = state.tasks.find(x => x.type === 'wake' && !x.archivedAt) || state.tasks.find(x => x.type === 'wake');
     const svg = $('wakeChart');
@@ -625,12 +699,14 @@
     const nowDone = isDone(t, (state.log[k] || {})[id]);
     const name = esc(state.name), bossName = after.boss.name;
     if (after.bossWins > before.bossWins) {
-      say(`${name}の攻撃！<br>${bossName}を倒した！ ＋${after.boss.reward}EXP ＋${GOLD_BOSS}G`); SFX.boss(); vibrate([100, 50, 300]); flash();
+      say(`${name}の攻撃！<br>${bossName}を倒した！ ＋${after.boss.reward}EXP ＋${after.boss.gold}G`); SFX.boss(); vibrate([100, 50, 300]); flash();
     } else if (after.perDay[k]?.cleared && !before.perDay[k]?.cleared) {
       say(`今日のクエストを達成！<br>HP＋${HEAL}${after.freezes > before.freezes ? '・❄氷のお守りを手に入れた！' : ''}`);
       SFX.clear(); if (after.freezes > before.freezes) setTimeout(SFX.freeze, 450); vibrate([60, 40, 120]);
     } else if (nowDone && !wasDone) {
-      say(`${esc(taskName(t))}をやり遂げた！ <span class="y">＋${gd}G</span><br>${bossName}に<span class="r">${bd}</span>のダメージ！`); SFX.done(); vibrate(40);
+      const crit = isCrit(k, id);
+      say(`${esc(taskName(t))}をやり遂げた！ <span class="y">＋${gd}G</span><br>${crit ? '<span class="y">会心の一撃！</span> ' : ''}${bossName}に<span class="r">${bd}</span>のダメージ！`);
+      if (crit) { noise(0.2, 0.15); setTimeout(SFX.done, 120); flash(); vibrate([30, 30, 80]); } else { SFX.done(); vibrate(40); }
     } else if (diff > 0) {
       say(`${bossName}に<span class="r">${bd}</span>のダメージ！`); SFX.hit(); vibrate(20);
     } else if (diff < 0) SFX.undo();

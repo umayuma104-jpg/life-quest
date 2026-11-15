@@ -236,3 +236,11 @@ label.lb { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4p
 .card.item.trying { border-color: var(--y); background: var(--card2); }
 .item-ic { width: 48px; height: 48px; display: grid; place-items: center; background: #000; border-radius: 6px; flex-shrink: 0; }
 .tabs button { font-size: 10px; }
+
+/* ボーナス・実績 */
+.bonus { font-size: 11px; color: #241a00; background: var(--y); border-radius: 4px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
+.ach { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.ach:first-child { border-top: 0; }
+.ach .ai { width: 24px; text-align: center; }
+.ach:not(.got) { color: #b8b8d8; }
+.dex .dim { font-size: 9px; }
