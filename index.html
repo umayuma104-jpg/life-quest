@@ -20,208 +20,92 @@
 <title>Life Quest</title>
 </head>
 <body>
-<div class="wrap">
-  <!-- ステータス -->
-  <section class="win" id="heroWin">
-    <h3>ステータス</h3>
-    <div class="hero-row">
-      <div class="hero-pic" id="heroPic"></div>
-      <div class="grow">
-        <div class="between"><span class="name" id="heroName">ぼうけんしゃ</span><span>Lv <b class="y big" id="lvNum">1</b></span></div>
-        <div class="dim small" id="titleTxt">しょうごう：見習い</div>
-      </div>
-    </div>
-    <div class="between small mt8"><span>HP</span><span id="hpTxt">100/100</span></div>
-    <div class="pbar hp"><i id="hpBar"></i></div>
-    <div class="between small"><span>EXP</span><span id="xpTxt">0/80</span></div>
-    <div class="pbar xp"><i id="xpBar"></i></div>
-    <div class="chips">
-      <span id="streakChip">🔥れんぞく 0にち</span>
-      <span class="b" id="freezeChip">❄×0</span>
-      <span class="y" id="bonusChip">EXP×1.00</span>
-    </div>
-  </section>
 
-  <!-- きょう -->
+<!-- 上のバー（表示のみ ＋ 右のアイコンボタン） -->
+<header class="top">
+  <div class="top-in">
+    <div class="avatar" id="avatar"><span class="lvbadge" id="lvNum">1</span></div>
+    <div class="who">
+      <div class="name" id="heroName">ぼうけんしゃ</div>
+      <div class="meter xp"><i id="xpBar"></i><span id="xpTxt">0/80</span></div>
+      <div class="meter hp"><i id="hpBar"></i><span id="hpTxt">HP 100</span></div>
+    </div>
+    <div class="top-btns">
+      <button class="ibtn" id="mailBtn" aria-label="おしらせ"><span id="mailIcon"></span><span class="badge hidden" id="mailBadge">0</span></button>
+      <button class="ibtn" id="helpBtn" aria-label="ルール">？</button>
+    </div>
+  </div>
+  <div class="pills">
+    <span class="pill">🔥<b id="streakNum">0</b>にち</span>
+    <span class="pill ice">❄<b id="freezeNum">0</b></span>
+    <span class="pill gold">EXP×<b id="multNum">1.00</b></span>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- クエスト -->
   <section id="tab-today">
-    <div class="win hidden" id="backupWin">
-      <h3>おしらせ</h3>
-      <div id="backupMsg"></div>
-      <div class="btns mt8"><button class="pbtn primary" id="backupNow">バックアップする</button><button class="pbtn" id="backupLater">あとで</button></div>
-    </div>
-
-    <div class="win boss-win" id="bossWin"></div>
-
-    <div class="win">
-      <h3 id="todayTitle">きょうの クエスト</h3>
+    <div class="card boss-card" id="bossCard"></div>
+    <div class="card">
+      <div class="card-h"><span>きょうの クエスト</span><span class="prog" id="todayProg">0/0</span></div>
       <div id="taskList"></div>
-      <div class="foot" id="dayFoot"></div>
+      <div class="dayline" id="dayLine"></div>
     </div>
-
-    <div class="win msg" id="msgWin"></div>
   </section>
 
   <!-- つよさ -->
   <section id="tab-stats" class="hidden">
-    <div class="win">
-      <h3>そうび</h3>
-      <div class="hero-row">
-        <div id="heroBig"></div>
-        <div class="grow" id="equipList"></div>
-      </div>
+    <div class="card">
+      <div class="hero-big"><div id="heroBig"></div>
+        <div class="grow"><div class="name" id="heroName2"></div><div class="dim" id="titleTxt"></div>
+          <button class="btn sm blue mt8" id="titlesBtn">しょうごう いちらん</button></div></div>
+      <div class="card-h mt12"><span>そうび</span></div>
+      <div id="equipList"></div>
     </div>
-    <div class="win"><h3>のうりょく</h3><div id="statList"></div></div>
-    <div class="win"><h3>きろく</h3><div class="kpis" id="kpis"></div></div>
-    <div class="win"><h3>しょうごう</h3><div id="titleList"></div></div>
-    <div class="win small"><h3>ルール</h3>
-      <div class="rules">
-        ▶ その日の クエストを 3ぶんの2 いじょう クリアすると「たっせい日」。HPが 10 かいふく し、れんぞく きろく ＋1<br>
-        ▶ れんぞく 1にち ごとに EXP ＋5%（さいだい ×1.5）<br>
-        ▶ れんぞく 3にち ごとに ❄こおりの おまもり を 1こ ゲット<br>
-        ▶ たっせい できなかった 日は ❄を 1こ つかって ダメージと れんぞく リセットを ふせぐ<br>
-        ▶ ❄が ないと みたっせい で HP−15、なにも きろく しないと HP−25。れんぞく は 0 に<br>
-        ▶ はやおきは 30ぷん いないの ちこくなら EXP はんぶん<br>
-        ▶ HPが 0 になると せんとうふのう。いまの レベルで ためた EXP の はんぶんを うしなう<br>
-        ▶ まいしゅう げつようびに ボスが あらわれる。かせいだ EXP が そのまま ダメージ になる<br>
-        ▶ レベルが あがると クエストわく と そうび が ふえる
-      </div>
-    </div>
+    <div class="card"><div class="card-h"><span>のうりょく</span></div><div id="statList"></div></div>
+    <div class="card"><div class="kpis" id="kpis"></div></div>
   </section>
 
   <!-- きろく -->
   <section id="tab-log" class="hidden">
-    <div class="win"><h3>5しゅうかんの きろく</h3>
-      <div class="cal" id="cal"></div>
-      <div class="legend">
-        <span><i style="background:var(--g)"></i>ぜんぶ</span>
-        <span><i style="background:#1f8a4c"></i>たっせい</span>
-        <span><i style="background:#1e5a8a"></i>❄</span>
-        <span><i style="background:#8a1f2c"></i>ダメージ</span>
-        <span><i style="background:#2a2a4a"></i>やすみ</span>
-      </div>
-    </div>
-    <div class="win"><h3>まもの ずかん</h3><div class="dex" id="dex"></div></div>
-    <div class="win"><h3>おきた じかん（14にち）</h3><svg id="wakeChart" viewBox="0 0 320 140" width="100%" style="display:block"></svg></div>
-    <div class="win"><h3>ぼうけんの にっし</h3><div id="recent"></div></div>
+    <div class="card"><div class="card-h"><span>5しゅうかん</span></div><div class="cal" id="cal"></div><div class="legend" id="legend"></div></div>
+    <div class="card"><div class="card-h"><span>まもの ずかん</span><span class="dim" id="dexCount"></span></div><div class="dex" id="dex"></div></div>
+    <div class="card"><div class="card-h"><span>おきた じかん</span></div><svg id="wakeChart" viewBox="0 0 320 140" width="100%" style="display:block"></svg></div>
   </section>
 
-  <!-- せってい -->
-  <section id="tab-settings" class="hidden">
-    <div class="win"><h3>なまえ</h3><input id="nameInput" maxlength="12" class="full"></div>
-
-    <div class="win">
-      <h3 id="slotTitle">クエスト</h3>
-      <div id="editList"></div>
-      <div class="btns mt8"><button class="pbtn primary" id="addBtn">＋ クエストを ふやす</button></div>
-      <div class="dim small mt8" id="slotNote"></div>
-    </div>
-
-    <div class="win hidden" id="taskForm">
-      <h3 id="formTitle">クエストを ついか</h3>
-      <div class="small dim">おすすめから えらぶ</div>
-      <div class="tpls" id="tplList"></div>
-      <label class="fl">なまえ<input id="fName" maxlength="20" class="full"></label>
-      <div class="small dim mt8">アイコン</div>
-      <div class="icons" id="iconPick"></div>
-      <label class="fl">しゅるい
-        <select id="fType" class="full">
-          <option value="check">やった / やってない</option>
-          <option value="count">かいすう・じかん（もくひょう あり）</option>
-          <option value="wake">おきる じかん</option>
-        </select>
-      </label>
-      <div class="two">
-        <label class="fl">のうりょく
-          <select id="fCat" class="full">
-            <option value="str">STR たいりょく</option>
-            <option value="int">INT ちりょく</option>
-            <option value="mnd">MND せいしん</option>
-            <option value="vit">VIT せいかつ</option>
-          </select>
-        </label>
-        <label class="fl">EXP<input id="fXp" type="number" min="1" max="500" class="full"></label>
-      </div>
-      <div class="two" id="fCountRow">
-        <label class="fl">もくひょう<input id="fTarget" type="number" min="0.1" step="any" class="full"></label>
-        <label class="fl">たんい<input id="fUnit" maxlength="6" class="full"></label>
-      </div>
-      <label class="fl hidden" id="fWakeRow">もくひょうの きしょう じかん<input id="fWake" type="time" class="full"></label>
-      <div class="small dim mt8">やる ようび</div>
-      <div class="days" id="fDays"></div>
-      <div class="btns mt8"><button class="pbtn" id="cancelBtn">やめる</button><button class="pbtn primary" id="saveBtn">けってい</button></div>
-    </div>
-
-    <div class="win"><h3>しつもん</h3>
-      <div class="small">しつもんに こたえて、いまの クエストを えらびなおす ことが できます。</div>
-      <div class="btns mt8"><button class="pbtn" id="redoOb">しつもんに こたえる</button></div>
-    </div>
-
-    <div class="win"><h3>サウンド・しんどう</h3>
-      <div class="between"><span>こうかおん</span><button class="pbtn" id="soundBtn">ON</button></div>
-      <div class="between mt8"><span>しんどう（Android）</span><button class="pbtn" id="vibeBtn">ON</button></div>
-    </div>
-
-    <div class="win"><h3>リマインダー</h3>
-      <div class="between"><span>つうち</span><button class="pbtn" id="notifyBtn">OFF</button></div>
-      <div class="two mt8">
-        <label class="fl">あさ<input type="time" id="nMorning" class="full"></label>
-        <label class="fl">よる（やりのこし）<input type="time" id="nEvening" class="full"></label>
-      </div>
-      <div class="small dim mt8">アプリを かんぜんに とじていると とどかない ことが あります。かならず つうちが ほしい ときは カレンダーに とうろく してください。</div>
-      <div class="btns mt8"><button class="pbtn" id="icsBtn">カレンダーに とうろく</button></div>
-    </div>
-
-    <div class="win"><h3>バックアップ</h3>
-      <div class="small" id="backupInfo"></div>
-      <div class="btns mt8">
-        <button class="pbtn primary" id="exportBtn">バックアップ</button>
-        <button class="pbtn" id="importBtn">ふっかつ</button>
-      </div>
-      <input type="file" id="importFile" accept="application/json,.json" class="hidden">
-    </div>
-
-    <div class="win"><h3>インストール</h3>
-      <div class="small" id="installMsg"></div>
-      <div class="btns mt8"><button class="pbtn primary hidden" id="installBtn">ホームがめんに ついか</button></div>
-    </div>
-
-    <div class="win"><h3>きけん</h3>
-      <div class="btns"><button class="pbtn danger" id="resetBtn">さいしょから やりなおす</button></div>
-      <div class="small dim mt8">日付の きりかえは ごぜん3じ です。</div>
-    </div>
+  <!-- メニュー -->
+  <section id="tab-menu" class="hidden">
+    <div class="menu" id="menuList"></div>
   </section>
-</div>
+</main>
 
-<nav><div class="in">
-  <button data-tab="today" class="on">クエスト</button>
-  <button data-tab="stats">つよさ</button>
-  <button data-tab="log">きろく</button>
-  <button data-tab="settings">せってい</button>
+<nav class="tabs"><div class="in">
+  <button data-tab="today" class="on"><span class="ti" data-icon="sword"></span>クエスト</button>
+  <button data-tab="stats"><span class="ti" data-icon="shield"></span>つよさ</button>
+  <button data-tab="log"><span class="ti" data-icon="book"></span>きろく</button>
+  <button data-tab="menu"><span class="ti" data-icon="gear"></span>メニュー</button>
 </div></nav>
 
-<div class="flash hidden" id="flash"></div>
+<!-- 小窓（おしらせ・ルール・せってい などは ここに ひらく） -->
+<div class="sheet hidden" id="sheet">
+  <div class="sheet-box">
+    <div class="sheet-h"><span id="sheetTitle"></span><button class="btn sm close" id="sheetClose" aria-label="とじる">✕</button></div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
 
-<div class="modal hidden" id="lvModal"><div class="win center">
-  <h3>LEVEL UP!</h3>
+<div class="modal hidden" id="lvModal"><div class="sheet-box center">
+  <div class="lvtitle">LEVEL UP!</div>
   <div id="lvHero"></div>
   <div class="lvnum">Lv <span id="lvModalNum">2</span></div>
-  <div id="lvModalInfo" class="small"></div>
-  <div class="btns mt8 center-btns"><button class="pbtn" id="lvShare">Xで シェア</button><button class="pbtn primary" data-close>つづける</button></div>
+  <div id="lvModalInfo"></div>
+  <div class="row mt12"><button class="btn blue" id="lvShare">Xで シェア</button><button class="btn" id="lvClose">つづける</button></div>
 </div></div>
 
-<div class="modal hidden" id="reportModal"><div class="win">
-  <h3>ぼうけんの きろく</h3>
-  <div id="reportList"></div>
-  <div class="btns mt8"><button class="pbtn primary full" data-close>OK</button></div>
-</div></div>
-
-<div class="modal hidden" id="askModal"><div class="win">
-  <h3>おしらせ</h3>
-  <div id="askMsg"></div>
-  <div class="btns mt8"><button class="pbtn" id="askNo">いいえ</button><button class="pbtn primary" id="askYes">はい</button></div>
-</div></div>
-
+<div class="say hidden" id="say"></div>
+<div class="flash hidden" id="flash"></div>
 <div class="ob hidden" id="ob"><div class="ob-in" id="obBox"></div></div>
+<input type="file" id="importFile" accept="application/json,.json" class="hidden">
 
 <script src="js/sprites.js"></script>
 <script src="js/app.js"></script>

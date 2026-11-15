@@ -286,8 +286,13 @@
     star: { pal: { y: '#fce35a', o: '#ff9d2e' }, rows: ['...yy...', '...yy...', 'yyyyyyyy', '.yyyyyy.', '..yyyy..', '.yyooyy.', '.yo..oy.', '........'] },
     heart: { pal: { r: '#ff4a4a', w: '#ffffff' }, rows: ['........', '.rr.rr..', 'rwrrrrr.', 'rrrrrrr.', '.rrrrr..', '..rrr...', '...r....', '........'] },
     plank: { pal: { s: '#ffd2a8', c: '#3d7bd9', k: '#5a6472' }, rows: ['........', '........', 's.......', 'sccccccc'.replace('cccccccc', 'ccccccc'), '.kccccck'.replace('kccccck', 'cccccck'), 's.......'.replace('s', 's'), 'kkkkkkkk', '........'] },
+    sword: { pal: { w: '#e0e0e0', g: '#c9a227', b: '#8d5a2b' }, rows: ['......ww', '.....www', '....www.', 'g..www..', '.gwww...', '..gg....', '.b.gg...', 'b...g...'] },
+    shield: { pal: { d: '#8d5a2b', y: '#fce35a', r: '#c0392b' }, rows: ['.dddddd.', 'dyyyyyyd', 'dyyrryyd', 'dyrrrryd', 'dyyrryyd', '.dyyyyd.', '..dyyd..', '...dd...'] },
+    gear: { pal: { g: '#9aa7b8', k: '#0a0a2a' }, rows: ['...gg...', '.g.gg.g.', '..gggg..', 'gggkkggg', 'gggkkggg', '..gggg..', '.g.gg.g.', '...gg...'] },
+    mail: { pal: { w: '#f4efe3', k: '#c0392b' }, rows: ['........', 'wwwwwwww', 'wkwwwwkw', 'wwkwwkww', 'wwwkkwww', 'wwwwwwww', 'wwwwwwww', '........'] },
   };
-  const ICON_KEYS = Object.keys(ICONS);
+  // クエスト用に選べるアイコン（画面用のアイコンは除く）
+  const ICON_KEYS = Object.keys(ICONS).filter(k => !['sword', 'shield', 'gear', 'mail'].includes(k));
   function icon(key, size = 28) {
     const ic = ICONS[key];
     if (!ic) return null;
