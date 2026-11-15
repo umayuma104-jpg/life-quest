@@ -90,5 +90,5 @@
     return '<svg width="' + size + '" height="' + size + '" viewBox="2 ' + (a.rows ? -3 : -4) + ' 8 8" shape-rendering="crispEdges" aria-hidden="true">' + rectsOf(rows, a.pal, 0) + '</svg>';
   }
 
-  window.Pets = { PETS, GEAR, GEAR_SLOTS, FOODS, MAX_LV, need, levelOf, stats, fxText, GACHA, svg, gearSvg, UNLOCK_LV: 5 };
+  window.Pets = { PETS, GEAR, GEAR_SLOTS, FOODS, MAX_LV, need, levelOf, stats, fxText, GACHA, svg, gearSvg, ART, GEAR_ART, UNLOCK_LV: 5 };
 })();

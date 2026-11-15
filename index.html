@@ -47,6 +47,7 @@
 <main class="wrap">
   <!-- クエスト -->
   <section id="tab-today">
+    <button class="event-bar" id="eventBar"></button>
     <div class="card stage-card" id="bossCard"></div>
     <div class="card">
       <div class="card-h"><span>今日のクエスト <span class="prog" id="todayProg">0/0</span></span><button class="btn sm gray" id="retroBtn">昨日の記録</button></div>
@@ -83,7 +84,8 @@
   <!-- 記録 -->
   <section id="tab-log" class="hidden">
     <div class="card"><div class="card-h"><span>5週間の記録</span></div><div class="cal" id="cal"></div><div class="legend" id="legend"></div></div>
-    <div class="card"><div class="card-h"><span>魔物図鑑</span><span class="dim" id="dexCount"></span></div><div class="dex" id="dex"></div></div>
+    <div class="card"><div class="card-h"><span>魔物図鑑</span><span class="dim" id="dexCount"></span></div><div class="dex" id="dex"></div>
+      <div class="card-h mt12"><span>イベントボス</span></div><div class="dex" id="evDex"></div></div>
     <div class="card"><div class="card-h"><span>起床時刻（14日間）</span></div><svg id="wakeChart" viewBox="0 0 320 140" width="100%" style="display:block"></svg></div>
   </section>
 
@@ -128,6 +130,7 @@
 <script src="js/catalog.js"></script>
 <script src="js/gear.js"></script>
 <script src="js/pets.js"></script>
+<script src="js/events.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

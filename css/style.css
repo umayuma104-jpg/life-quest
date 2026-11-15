@@ -385,3 +385,18 @@ label.lb { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4p
 .st-dmg.pet { color: #9af0a0; font-size: 16px; bottom: 60px; right: 26%; }
 .rare.r2, .g-card.r2 .g-st { color: #9a9ad0; }
 .seg .btn { padding: 4px 2px; }
+
+/* ---------- 季節イベント ---------- */
+.event-bar { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; margin-bottom: 12px; padding: 8px 12px; cursor: pointer;
+  background: var(--card); color: var(--w); border: 2px dashed #ffffff33; border-radius: 10px; }
+.event-bar.on { border-style: solid; background: linear-gradient(90deg, #2a1a3a, var(--card)); box-shadow: 0 3px 0 #000; }
+.event-bar .ev-ic { font-size: 22px; }
+.event-bar .arrow { color: var(--y); }
+.ev-row { display: flex; gap: 10px; align-items: center; }
+.ev-note { font-size: 13px; }
+.st-week { padding: 4px 0 8px; }
+.st-ev-newyear .stage { background: radial-gradient(circle at 80% 25%, #ffd54f 0 10px, transparent 11px), linear-gradient(#a12a24 0 70%, #6a1a14 70%); }
+.st-ev-valentine .stage { background: radial-gradient(circle at 20% 30%, #ff7ab0 0 3px, transparent 4px), radial-gradient(circle at 70% 20%, #ffc0d8 0 3px, transparent 4px), linear-gradient(#5a1a3a 0 70%, #3a1028 70%); }
+.st-ev-summer .stage { background: radial-gradient(circle at 82% 22%, #fff6a0 0 12px, transparent 13px), linear-gradient(#4aa3ff 0 62%, #e8c070 62%); }
+.st-ev-halloween .stage { background: radial-gradient(circle at 80% 22%, #ffd54f 0 9px, transparent 10px), linear-gradient(#2a1040 0 70%, #1a0a20 70%); }
+.st-ev-xmas .stage { background: radial-gradient(circle at 15% 20%, #fff 0 1.5px, transparent 2px), radial-gradient(circle at 45% 35%, #fff 0 1.5px, transparent 2px), radial-gradient(circle at 75% 15%, #fff 0 1.5px, transparent 2px), linear-gradient(#0a1a3a 0 68%, #e8f0ff 68%); }
