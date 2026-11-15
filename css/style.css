@@ -400,3 +400,14 @@ label.lb { display: block; font-size: 12px; color: var(--dim); margin: 10px 0 4p
 .st-ev-summer .stage { background: radial-gradient(circle at 82% 22%, #fff6a0 0 12px, transparent 13px), linear-gradient(#4aa3ff 0 62%, #e8c070 62%); }
 .st-ev-halloween .stage { background: radial-gradient(circle at 80% 22%, #ffd54f 0 9px, transparent 10px), linear-gradient(#2a1040 0 70%, #1a0a20 70%); }
 .st-ev-xmas .stage { background: radial-gradient(circle at 15% 20%, #fff 0 1.5px, transparent 2px), radial-gradient(circle at 45% 35%, #fff 0 1.5px, transparent 2px), radial-gradient(circle at 75% 15%, #fff 0 1.5px, transparent 2px), linear-gradient(#0a1a3a 0 68%, #e8f0ff 68%); }
+
+/* チュートリアル中は画面を動かさない */
+html.tut-lock, html.tut-lock body { overflow: hidden; overscroll-behavior: none; }
+.tut { touch-action: none; }
+
+/* 戦闘画面が見えないときに、真ん中に出す小窓 */
+.battle-pop { position: fixed; inset: 0; z-index: 58; display: grid; place-items: center; padding: 16px; pointer-events: none; background: #0006; animation: bpin .2s steps(3); }
+.battle-pop.out { animation: bpout .3s steps(3) forwards; }
+.battle-pop .bp-card { width: 100%; max-width: 520px; margin: 0; box-shadow: 0 8px 0 #000a; }
+@keyframes bpin { from { opacity: 0; } }
+@keyframes bpout { to { opacity: 0; } }

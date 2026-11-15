@@ -702,8 +702,37 @@
       <div class="st-week small dim">今週のボス：${b.name} ${b.defeated ? '<span class="y">討伐済み</span>' : `HP ${wl}/${b.hp}`}</div>`;
   }
   // 攻撃の演出：主人公が踏み込み → 斬撃 → ボスがよろめく → ダメージの数字
+  // 戦闘画面が、上のバーと下のタブの間に全部見えているか
+  function stageInView(st) {
+    const r = st.getBoundingClientRect();
+    const top = document.querySelector('.top').getBoundingClientRect().bottom;
+    const bottom = document.querySelector('.tabs').getBoundingClientRect().top;
+    return r.height > 0 && r.top >= top - 4 && r.bottom <= bottom + 4;
+  }
+  // 見えていないときは、戦闘画面の複製を画面の真ん中に出して、そこで演出する
+  function popupStage() {
+    const card = $('bossCard'), src = $('stage');
+    const pop = document.createElement('div');
+    pop.className = 'battle-pop';
+    const box = document.createElement('div');
+    box.className = card.className + ' bp-card';
+    box.style.borderColor = card.style.borderColor;
+    const head = card.querySelector('.st-head'), bar = card.querySelector('.bar');
+    if (head) box.appendChild(head.cloneNode(true));
+    if (bar) box.appendChild(bar.cloneNode(true));
+    const st = src.cloneNode(true);
+    st.removeAttribute('id');
+    st.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    st.querySelectorAll('.st-win').forEach(el => el.remove());
+    box.appendChild(st);
+    pop.appendChild(box);
+    document.body.appendChild(pop);
+    setTimeout(() => { pop.classList.add('out'); setTimeout(() => pop.remove(), 300); }, 1900);
+    return st;
+  }
   function playAttack(dmg, opts = {}) {
-    const st = $('stage'); if (!st || dmg <= 0) return;
+    let st = $('stage'); if (!st || dmg <= 0) return;
+    if (!stageInView(st)) st = popupStage();
     const hero = st.querySelector('.st-hero'), boss = st.querySelector('.st-boss');
     const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
     if (opts.bomb) {
@@ -1767,6 +1796,7 @@
   let tutStep = -1;
   function startTutorial() {
     closeSheet(); showTab('today');
+    document.documentElement.classList.add('tut-lock');
     tutStep = 0; $('tut').classList.remove('hidden');
     showTut();
   }
@@ -1790,11 +1820,16 @@
   }
   function endTutorial() {
     $('tut').classList.add('hidden'); tutStep = -1;
+    document.documentElement.classList.remove('tut-lock');
     state.tutorialDone = true; save();
     window.scrollTo(0, 0);
     say(`${esc(state.name)}の冒険が始まる！`);
   }
   window.addEventListener('resize', () => { if (tutStep >= 0) showTut(); });
+  // 説明の「次へ」「スキップ」以外は、触っても何も起きないようにする（スクロールも止める）
+  const tutBlock = e => { if (tutStep >= 0 && !(e.target.closest && e.target.closest('.tut-box button'))) { e.preventDefault(); e.stopPropagation(); } };
+  ['click', 'pointerdown', 'touchstart', 'touchmove', 'wheel', 'contextmenu'].forEach(type => $('tut').addEventListener(type, tutBlock, { passive: false }));
+  window.addEventListener('keydown', e => { if (tutStep >= 0 && ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) e.preventDefault(); }, { passive: false });
 
   // ---------- 通知 ----------
   const canNotify = () => 'Notification' in window;
@@ -1923,7 +1958,13 @@
   render();
   checkNotify();
   // すでに遊んでいる人にも、チュートリアルを1回だけ見せる
-  if (state.onboarded && !state.tutorialDone) setTimeout(() => { if ($('lvModal').classList.contains('hidden') && $('sheet').classList.contains('hidden')) startTutorial(); }, 1500);
+  // 他の小窓（レベルアップなど）が開いている間は待って、閉じてから表示する
+  const tryTutorial = () => {
+    if (state.tutorialDone || tutStep >= 0) return;
+    const busy = ['lvModal', 'sheet', 'ob', 'gacha'].some(id => !$(id).classList.contains('hidden'));
+    if (busy) setTimeout(tryTutorial, 1000); else startTutorial();
+  };
+  if (state.onboarded && !state.tutorialDone) setTimeout(tryTutorial, 1500);
   if (!state.onboarded) {
     if (!Object.keys(state.log).length) startOnboarding(false);
     else {
