@@ -419,26 +419,15 @@
   $('mailBtn').addEventListener('click', openMail);
   $('helpBtn').addEventListener('click', () => { SFX.tap(); openHelp(); });
   function openHelp() {
-    openSheet('ルール', `<ul class="rules">
-      <li>その日のクエストを<span class="y">3分の2以上</span>クリアすると「達成」</li>
-      <li>達成するとHP＋${HEAL}、🔥連続記録＋1</li>
-      <li>🔥連続1日ごとにEXP＋5%（最大×1.5）</li>
-      <li>🔥3日連続ごとに<span class="b">❄氷のお守り</span>を1個獲得</li>
-      <li>未達成の日は❄を1個使って、ダメージと連続記録のリセットを防ぐ</li>
-      <li>❄がない場合、未達成で<span class="r">HP−${DMG_PARTIAL}</span>、記録なしで<span class="r">HP−${DMG_NONE}</span>。連続記録は0に戻る</li>
-      <li>HPが0になると戦闘不能。今のレベルで貯めたEXPの半分を失う</li>
-      <li>毎週月曜にボスが出現。稼いだEXPがそのままダメージになる</li>
-      <li>早起きは30分以内の遅れならEXP半分</li>
-      <li>回数を増やすと獲得EXPも増える</li>
-      <li>ゴールド：獲得EXPの半分＋達成で${GOLD_PER_CLEAR}G＋ボス討伐で${GOLD_BOSS}G〜＋レベルアップで${GOLD_LEVEL}G＋実績の報酬</li>
-      <li>毎日クエストの1つが<span class="y">★EXP2倍</span>になる</li>
-      <li>クエストを完了すると、たまに<span class="y">会心の一撃</span>（ボスへのダメージ2倍）が出る</li>
-      <li>ボスは全20体。週を重ねるほど強くなり、報酬も増える</li>
-      <li>💎ジェム：達成した日${GEM_CLEAR}・ボス討伐${GEM_BOSS}・実績${GEM_ACH}・レベルアップ${GEM_LEVEL}。ガチャに使う</li>
-      <li>ガチャ限定の装備には火傷・毒などの特殊能力があり、同じセットを3部位・6部位そろえるとセット効果が付く</li>
-      <li>アイテムは右上の👜から使える</li>
-      <li>ショップで装備を買える。兜・ブーツ・剣はボスへのダメージ、鎧・レギンス・盾は最大HPや被ダメージ軽減</li>
-      <li>日付の切り替えは午前3時</li></ul>`);
+    const sec = (title, items) => `<div class="rule-sec"><div class="rule-h">${title}</div><ul class="rules">${items.map(i => `<li>${i}</li>`).join('')}</ul></div>`;
+    openSheet('ルール', [
+      sec('達成と連続記録', [`その日のクエストを<span class="y">3分の2以上</span>クリアで「達成」`, `達成でHP＋${HEAL}・🔥連続＋1`, '🔥連続1日ごとにEXP＋5%（最大×1.5）', `毎日1つのクエストが<span class="y">★EXP2倍</span>`]),
+      sec('サボったとき', [`🔥3日連続ごとに<span class="b">❄氷のお守り</span>を1個獲得`, '未達成の日は❄を1個使って守る', `❄がないと<span class="r">HP−${DMG_PARTIAL}</span>（記録なしは<span class="r">−${DMG_NONE}</span>）、🔥は0に`, 'HP0で戦闘不能：今のレベルのEXPが半分に']),
+      sec('ボス', ['毎週月曜に出現。全20体、週を重ねるほど強くなる', '稼いだEXPがそのままダメージになる', `クエスト完了時、たまに<span class="y">会心の一撃</span>（ダメージ2倍）`]),
+      sec('報酬', [`ゴールド：EXPの半分＋達成${GOLD_PER_CLEAR}＋ボス${GOLD_BOSS}〜＋レベルアップ${GOLD_LEVEL}＋実績`, `💎ジェム：達成${GEM_CLEAR}・ボス${GEM_BOSS}・実績${GEM_ACH}・レベルアップ${GEM_LEVEL}`]),
+      sec('装備・ガチャ・アイテム', ['頭・足・武器は攻撃、体・脚・サブは守り', 'ガチャ限定装備は火傷・毒などの特殊能力つき。同じセットを3・6部位そろえるとセット効果', 'アイテムは右上の👜から使う']),
+      sec('その他', ['早起きは30分以内の遅れならEXP半分', '回数を増やすと獲得EXPも増える', '日付の切り替えは午前3時']),
+    ].join(''));
   }
 
   // ---------- 描画 ----------
@@ -462,7 +451,7 @@
     $('gemNum').textContent = c.gems.toLocaleString();
     $('streakNum').textContent = c.streak;
     $('freezeNum').textContent = c.freezes;
-    $('multNum').textContent = c.mult.toFixed(2);
+    $('multNum').textContent = c.mult.toFixed(2).replace(/0$/, '');
     renderBoss(c); renderToday(c, L); renderStats(c, L); renderShop(c); renderLog(c); renderBadge();
     // 新しく達成した実績を知らせる
     const got = Object.keys(c.ach);
@@ -687,7 +676,7 @@
       html = `<div class="seg wrap-seg mt8">${S.SLOTS.map(sl => `<button class="btn ${sl === shopSlot ? 'on' : ''}" data-slot="${sl}">${G.SLOTS[sl].name}</button>`).join('')}</div>`;
       html += `<div class="dim" style="margin:10px 2px 4px">${G.SLOTS[shopSlot].name}（${G.SLOTS[shopSlot].kind}）</div>` + G.LIST.filter(x => x.slot === shopSlot).map(x => {
         const own = owns(x.id), worn = gear[x.slot] === x.id;
-        const btn = worn ? '<button class="btn sm green" disabled>装備中</button>'
+        const btn = worn ? '<span class="state-label on">装備中</span>'
           : own ? `<button class="btn sm blue" data-equip="${x.id}">装備する</button>`
           : x.gacha ? '<span class="dim small">ガチャ限定</span>'
           : `<button class="btn sm" data-buy="${x.id}" ${c.gold < x.price ? 'disabled' : ''}>${x.price}G</button>`;
@@ -873,7 +862,7 @@
       const n = itemCount(id), once = id === 'xpbook' && usedToday(id), noBoss = id === 'bomb' && C.boss.defeated;
       return `<div class="list-row"><div class="item-ic">${S.icon(it.icon, 30)}</div>
         <div class="grow">${it.name} <span class="y">×${n}</span><div class="dim">${it.desc}</div></div>
-        <button class="btn sm" data-use="${id}" ${!n || once || noBoss ? 'disabled' : ''}>${once ? '使用済み' : noBoss ? '討伐済み' : '使う'}</button></div>`;
+        ${once || noBoss ? `<span class="state-label">${once ? '使用済み' : '討伐済み'}</span>` : `<button class="btn sm" data-use="${id}" ${!n ? 'disabled' : ''}>使う</button>`}</div>`;
     }).join('') + '<div class="dim center mt12">アイテムはショップやガチャで手に入ります</div>', body => {
       body.onclick = e => {
         const b = e.target.closest('[data-use]'); if (!b || b.disabled) return;
