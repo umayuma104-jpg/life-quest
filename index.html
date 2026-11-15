@@ -21,22 +21,22 @@
 </head>
 <body>
 
-<!-- 上のバー（表示のみ ＋ 右のアイコンボタン） -->
+<!-- 上のバー（表示 ＋ 右のアイコンボタン） -->
 <header class="top">
   <div class="top-in">
     <div class="avatar" id="avatar"><span class="lvbadge" id="lvNum">1</span></div>
     <div class="who">
-      <div class="name" id="heroName">ぼうけんしゃ</div>
+      <div class="name" id="heroName">冒険者</div>
       <div class="meter xp"><i id="xpBar"></i><span id="xpTxt">0/80</span></div>
       <div class="meter hp"><i id="hpBar"></i><span id="hpTxt">HP 100</span></div>
     </div>
     <div class="top-btns">
-      <button class="ibtn" id="mailBtn" aria-label="おしらせ"><span id="mailIcon"></span><span class="badge hidden" id="mailBadge">0</span></button>
+      <button class="ibtn" id="mailBtn" aria-label="お知らせ"><span id="mailIcon"></span><span class="badge hidden" id="mailBadge">0</span></button>
       <button class="ibtn" id="helpBtn" aria-label="ルール">？</button>
     </div>
   </div>
   <div class="pills">
-    <span class="pill">🔥<b id="streakNum">0</b>にち</span>
+    <span class="pill">🔥連続<b id="streakNum">0</b>日</span>
     <span class="pill ice">❄<b id="freezeNum">0</b></span>
     <span class="pill gold">EXP×<b id="multNum">1.00</b></span>
   </div>
@@ -47,30 +47,30 @@
   <section id="tab-today">
     <div class="card boss-card" id="bossCard"></div>
     <div class="card">
-      <div class="card-h"><span>きょうの クエスト</span><span class="prog" id="todayProg">0/0</span></div>
+      <div class="card-h"><span>今日のクエスト</span><span class="prog" id="todayProg">0/0</span></div>
       <div id="taskList"></div>
       <div class="dayline" id="dayLine"></div>
     </div>
   </section>
 
-  <!-- つよさ -->
+  <!-- ステータス -->
   <section id="tab-stats" class="hidden">
     <div class="card">
       <div class="hero-big"><div id="heroBig"></div>
         <div class="grow"><div class="name" id="heroName2"></div><div class="dim" id="titleTxt"></div>
-          <button class="btn sm blue mt8" id="titlesBtn">しょうごう いちらん</button></div></div>
-      <div class="card-h mt12"><span>そうび</span></div>
+          <button class="btn sm blue mt8" id="titlesBtn">称号一覧</button></div></div>
+      <div class="card-h mt12"><span>装備</span></div>
       <div id="equipList"></div>
     </div>
-    <div class="card"><div class="card-h"><span>のうりょく</span></div><div id="statList"></div></div>
+    <div class="card"><div class="card-h"><span>能力</span></div><div id="statList"></div></div>
     <div class="card"><div class="kpis" id="kpis"></div></div>
   </section>
 
-  <!-- きろく -->
+  <!-- 記録 -->
   <section id="tab-log" class="hidden">
-    <div class="card"><div class="card-h"><span>5しゅうかん</span></div><div class="cal" id="cal"></div><div class="legend" id="legend"></div></div>
-    <div class="card"><div class="card-h"><span>まもの ずかん</span><span class="dim" id="dexCount"></span></div><div class="dex" id="dex"></div></div>
-    <div class="card"><div class="card-h"><span>おきた じかん</span></div><svg id="wakeChart" viewBox="0 0 320 140" width="100%" style="display:block"></svg></div>
+    <div class="card"><div class="card-h"><span>5週間の記録</span></div><div class="cal" id="cal"></div><div class="legend" id="legend"></div></div>
+    <div class="card"><div class="card-h"><span>魔物図鑑</span><span class="dim" id="dexCount"></span></div><div class="dex" id="dex"></div></div>
+    <div class="card"><div class="card-h"><span>起床時刻（14日間）</span></div><svg id="wakeChart" viewBox="0 0 320 140" width="100%" style="display:block"></svg></div>
   </section>
 
   <!-- メニュー -->
@@ -81,15 +81,15 @@
 
 <nav class="tabs"><div class="in">
   <button data-tab="today" class="on"><span class="ti" data-icon="sword"></span>クエスト</button>
-  <button data-tab="stats"><span class="ti" data-icon="shield"></span>つよさ</button>
-  <button data-tab="log"><span class="ti" data-icon="book"></span>きろく</button>
+  <button data-tab="stats"><span class="ti" data-icon="shield"></span>ステータス</button>
+  <button data-tab="log"><span class="ti" data-icon="book"></span>記録</button>
   <button data-tab="menu"><span class="ti" data-icon="gear"></span>メニュー</button>
 </div></nav>
 
-<!-- 小窓（おしらせ・ルール・せってい などは ここに ひらく） -->
+<!-- 小窓 -->
 <div class="sheet hidden" id="sheet">
   <div class="sheet-box">
-    <div class="sheet-h"><span id="sheetTitle"></span><button class="btn sm close" id="sheetClose" aria-label="とじる">✕</button></div>
+    <div class="sheet-h"><span id="sheetTitle"></span><button class="btn sm close" id="sheetClose" aria-label="閉じる">✕</button></div>
     <div class="sheet-body" id="sheetBody"></div>
   </div>
 </div>
@@ -99,7 +99,7 @@
   <div id="lvHero"></div>
   <div class="lvnum">Lv <span id="lvModalNum">2</span></div>
   <div id="lvModalInfo"></div>
-  <div class="row mt12"><button class="btn blue" id="lvShare">Xで シェア</button><button class="btn" id="lvClose">つづける</button></div>
+  <div class="row mt12"><button class="btn blue" id="lvShare">Xでシェア</button><button class="btn" id="lvClose">続ける</button></div>
 </div></div>
 
 <div class="say hidden" id="say"></div>
@@ -108,6 +108,7 @@
 <input type="file" id="importFile" accept="application/json,.json" class="hidden">
 
 <script src="js/sprites.js"></script>
+<script src="js/catalog.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

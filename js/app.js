@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const S = window.Sprites;
+  const CAT = window.Catalog;
   const KEY = 'lifeQuest.v1';
   const DAY_START_HOUR = 3;
   const MAX_HP = 100, HEAL = 10, DMG_PARTIAL = 15, DMG_NONE = 25;
@@ -9,10 +10,10 @@
   const WD = '日月火水木金土';
   const APP_URL = 'https://umayuma104-jpg.github.io/life-quest/';
   const CATS = {
-    str: { en: 'STR', name: 'たいりょく', color: 'var(--r)' },
-    int: { en: 'INT', name: 'ちりょく', color: 'var(--b)' },
-    mnd: { en: 'MND', name: 'せいしん', color: 'var(--p)' },
-    vit: { en: 'VIT', name: 'せいかつ', color: 'var(--g)' },
+    str: { en: 'STR', name: '体力', color: 'var(--r)' },
+    int: { en: 'INT', name: '知力', color: 'var(--b)' },
+    mnd: { en: 'MND', name: '精神', color: 'var(--p)' },
+    vit: { en: 'VIT', name: '生活', color: 'var(--g)' },
   };
   const TITLES = [
     [1, '見習い'], [3, '駆け出しの冒険者'], [5, '規律の挑戦者'], [8, '鍛錬の戦士'],
@@ -24,31 +25,10 @@
   const nextSlotLv = lv => (SLOT_LV.find(s => s[0] > lv) || [null])[0];
   const FRAMES = [[1, '#ffffff'], [10, '#5ac8ff'], [20, '#fce35a'], [30, '#ff7ad9'], [50, '#3cdc6c']];
   const frameFor = lv => FRAMES.filter(f => lv >= f[0]).pop()[1];
-
-  // ---------- クエストのカタログ ----------
   const GOALS = {
-    fit: 'たいりょくを つけたい', slim: 'やせたい・ひきしめたい', wake: 'はやおき したい',
-    study: 'べんきょう・じことうし', mind: 'こころを ととのえたい', rhythm: 'せいかつリズムを ととのえたい',
+    fit: '体力をつけたい', slim: '痩せたい・引き締めたい', wake: '早起きしたい',
+    study: '勉強・自己投資', mind: '心を整えたい', rhythm: '生活リズムを整えたい',
   };
-  const CATALOG = [
-    { key: 'wake', icon: 'sun', name: '早起き', type: 'wake', cat: 'vit', xp: 30, goals: { wake: 6, rhythm: 3 }, time: 0 },
-    { key: 'pushup', icon: 'dumbbell', name: '腕立て伏せ', type: 'count', cat: 'str', xp: 20, unit: '回', targets: [10, 20, 40], steps: [5, 5, 10], scale: 'fit', goals: { fit: 4, slim: 2 }, time: 5 },
-    { key: 'squat', icon: 'dumbbell', name: 'スクワット', type: 'count', cat: 'str', xp: 20, unit: '回', targets: [15, 30, 50], steps: [5, 10, 10], scale: 'fit', goals: { fit: 3, slim: 4 }, time: 5 },
-    { key: 'plank', icon: 'plank', name: 'プランク', type: 'count', cat: 'str', xp: 15, unit: '秒', targets: [20, 45, 90], steps: [10, 15, 30], scale: 'fit', goals: { fit: 3, slim: 2 }, time: 3 },
-    { key: 'walk', icon: 'shoe', name: 'ウォーキング', type: 'count', cat: 'str', xp: 20, unit: '分', targets: [15, 30, 45], steps: [5, 5, 5], scale: 'time', goals: { slim: 4, fit: 2, mind: 1, rhythm: 1 }, timeIsTarget: true, maxFit: 1 },
-    { key: 'run', icon: 'shoe', name: 'ランニング', type: 'count', cat: 'str', xp: 30, unit: '分', targets: [10, 20, 30], steps: [5, 5, 5], scale: 'time', goals: { fit: 5, slim: 4 }, timeIsTarget: true, minFit: 1 },
-    { key: 'stretch', icon: 'star', name: 'ストレッチ', type: 'count', cat: 'str', xp: 10, unit: '分', targets: [5, 10, 15], steps: [5, 5, 5], scale: 'time', goals: { fit: 1, mind: 2, slim: 1 }, timeIsTarget: true },
-    { key: 'water', icon: 'drop', name: '水を飲む', type: 'count', cat: 'vit', xp: 10, unit: 'L', targets: [1.5, 2, 2], steps: [0.5, 0.5, 0.5], scale: 'fit', goals: { slim: 3, rhythm: 2 }, time: 0 },
-    { key: 'read', icon: 'book', name: '読書', type: 'count', cat: 'int', xp: 20, unit: 'ページ', targets: [10, 20, 40], steps: [5, 5, 10], scale: 'time', goals: { study: 5, mind: 1 }, time: [10, 20, 40] },
-    { key: 'study', icon: 'pen', name: '勉強', type: 'count', cat: 'int', xp: 25, unit: '分', targets: [15, 30, 60], steps: [5, 10, 15], scale: 'time', goals: { study: 6 }, timeIsTarget: true },
-    { key: 'meditate', icon: 'lotus', name: '瞑想', type: 'count', cat: 'mnd', xp: 15, unit: '分', targets: [3, 5, 10], steps: [1, 5, 5], scale: 'time', goals: { mind: 6, rhythm: 1 }, timeIsTarget: true },
-    { key: 'journal', icon: 'pen', name: '日記を書く', type: 'check', cat: 'mnd', xp: 15, goals: { mind: 3, study: 1 }, time: 5 },
-    { key: 'nophone', icon: 'phone', name: '寝る前1時間スマホを見ない', type: 'check', cat: 'mnd', xp: 20, goals: { mind: 3, rhythm: 4, wake: 3 }, time: 0 },
-    { key: 'sleep', icon: 'moon', name: '23時までに寝る', type: 'check', cat: 'vit', xp: 20, goals: { rhythm: 5, wake: 4 }, time: 0 },
-    { key: 'sunlight', icon: 'sun', name: '朝日を浴びる', type: 'check', cat: 'vit', xp: 10, goals: { rhythm: 3, mind: 2, wake: 2 }, time: 5 },
-    { key: 'tidy', icon: 'broom', name: '部屋を片付ける', type: 'check', cat: 'vit', xp: 10, goals: { mind: 2, rhythm: 2 }, time: 10 },
-    { key: 'nosnack', icon: 'apple', name: '間食しない', type: 'check', cat: 'vit', xp: 15, goals: { slim: 5 }, time: 0 },
-  ];
   const EMOJI_TO_ICON = { '🌅': 'sun', '💪': 'dumbbell', '🏃': 'shoe', '🚶': 'shoe', '💧': 'drop', '📚': 'book', '🧘': 'lotus', '📵': 'phone', '🧹': 'broom', '⭐': 'star' };
 
   // ---------- 日付 ----------
@@ -70,7 +50,7 @@
   function freshState() {
     const t = todayKey();
     return {
-      name: 'ぼうけんしゃ', tasks: [], log: {}, sched: {}, inbox: [], lastLevel: 1, start: t, seenUntil: addDays(t, -1),
+      name: '冒険者', tasks: [], log: {}, sched: {}, inbox: [], lastLevel: 1, start: t, seenUntil: addDays(t, -1),
       onboarded: false, sound: true, vibe: true, lastBackup: null, backupMailed: null,
       notify: { on: false, morning: '07:00', evening: '21:00', sent: {} },
     };
@@ -83,6 +63,7 @@
       if (EMOJI_TO_ICON[x.icon]) x.icon = EMOJI_TO_ICON[x.icon];
       if (x.type === 'count' && !x.step) x.step = autoStep(x.target, x.unit);
       if (x.archived && !x.archivedAt) { x.archivedAt = t; delete x.archived; }
+      if (x.tpl === 'sleep') { x.tpl = 'bed'; x.type = 'bed'; x.bedtime = '23:00'; }
     });
     if (!s.start) s.start = Object.keys(s.log).sort()[0] || t;
     if (!s.seenUntil) s.seenUntil = addDays(t, -1);
@@ -91,7 +72,7 @@
     if (s.sound === undefined) s.sound = true;
     if (s.vibe === undefined) s.vibe = true;
     if (!Array.isArray(s.inbox)) s.inbox = [];
-    if (s.name === '冒険者') s.name = 'ぼうけんしゃ';
+    if (s.name === 'ぼうけんしゃ') s.name = '冒険者';
     if (!s.sched) {
       s.sched = {};
       for (let k = s.start; k < t; k = addDays(k, 1))
@@ -113,11 +94,36 @@
   const currentIdsFor = k => state.tasks.filter(t => activeOn(t, k) && t.days.includes(dow(k))).map(t => t.id);
   const schedIds = k => (k < todayKey() && state.sched[k]) || currentIdsFor(k);
   const needFor = n => Math.ceil(n * 2 / 3);
+  const taskName = t => t.type === 'bed' ? `${t.bedtime || '23:00'}までに寝る` : t.name;
+
+  // ---------- 適性と目標 ----------
+  // 運動習慣（fit）や使える時間（time）から、その人に合う目標を決める。自分で変えられるのはこの範囲内だけ
+  const prefs = () => state.prefs || { fit: 1, time: 1, goals: [], wake: '06:30' };
+  const idxFor = (x, p = prefs()) => x.scale === 'time' ? p.time : x.scale === 'none' ? 1 : p.fit;
+  const recTarget = (x, p) => x.targets[idxFor(x, p)];
+  const stepOf = (x, p) => x.steps[idxFor(x, p)];
+  function rangeFor(x, p) {
+    if (x.range) return x.range;
+    const rec = recTarget(x, p), st = stepOf(x, p);
+    const min = Math.max(st, Math.floor(rec * 0.5 / st) * st);
+    const max = Math.max(rec + st, Math.ceil(rec * 1.5 / st) * st);
+    return [min, max];
+  }
+  const xpFor = (x, target) => x.type === 'count' ? Math.max(1, Math.round(x.xp * target / x.targets[1])) : x.xp;
+  function makeTask(x, p, over = {}) {
+    const t = { id: uid(), tpl: x.key, icon: x.icon, name: x.name, type: x.type, cat: x.cat, xp: x.xp, days: ALL_DAYS.slice() };
+    if (x.type === 'count') { t.unit = x.unit; t.step = stepOf(x, p); t.target = recTarget(x, p); }
+    if (x.type === 'wake') t.wake = p.wake || x.wake;
+    if (x.type === 'bed') t.bedtime = x.bedtime;
+    Object.assign(t, over);
+    if (x.type === 'count') t.xp = xpFor(x, t.target);
+    return t;
+  }
 
   // ---------- 計算 ----------
   function completion(task, v) {
     if (v == null || v === '' || v === false) return 0;
-    if (task.type === 'check') return v ? 1 : 0;
+    if (task.type === 'check' || task.type === 'bed') return v ? 1 : 0;
     if (task.type === 'count') return Math.max(0, Math.min(1, Number(v) / (task.target || 1)));
     if (task.type === 'wake') { const diff = toMin(v) - toMin(task.wake); return diff <= 0 ? 1 : diff <= 30 ? 0.5 : 0; }
     return 0;
@@ -175,26 +181,26 @@
       else if (cleared) {
         status = 'cleared'; streak++; clearedDays++; best = Math.max(best, streak);
         hp = Math.min(MAX_HP, hp + HEAL);
-        if (streak % FREEZE_EVERY === 0) { freezes++; events.push({ k, icon: '❄', title: '❄を てにいれた', text: `れんぞく ${streak}にち たっせい！ こおりの おまもりを てにいれた（${freezes}こ）` }); }
+        if (streak % FREEZE_EVERY === 0) { freezes++; events.push({ k, icon: '❄', title: '氷のお守りを手に入れた', text: `${streak}日連続で達成！ 氷のお守りを手に入れた（所持 ${freezes}個）` }); }
       } else if (k === tKey) status = 'pending';
       else if (freezes > 0) {
         freezes--; frozenDays++; status = 'frozen';
-        events.push({ k, icon: '🧊', title: '❄が みを まもった', text: `たっせい できなかったが ❄が みを まもった。れんぞく ${streak}にちは ぶじ（のこり ${freezes}こ）` });
+        events.push({ k, icon: '🧊', title: '氷のお守りが身を守った', text: `未達成だったが、氷のお守りが身を守った。連続${streak}日は継続（残り ${freezes}個）` });
       } else {
         const dmg = recorded ? DMG_PARTIAL : DMG_NONE;
         hp -= dmg; status = 'damage';
         const lost = streak; streak = 0;
-        events.push({ k, icon: '💥', title: `${dmg}の ダメージ`, text: `${recorded ? 'たっせい できなかった' : 'なにも きろく しなかった'}… HPが ${Math.max(0, hp)} に へった。${lost ? `れんぞく ${lost}にちが とぎれた。` : ''}` });
+        events.push({ k, icon: '💥', title: `${dmg}のダメージ`, text: `${recorded ? '未達成' : '記録なし'}… HPが${Math.max(0, hp)}に減った。${lost ? `連続${lost}日が途切れた。` : ''}` });
         if (hp <= 0) {
           const L = levelOf(total), lostXp = Math.floor(L.rest / 2);
           total -= lostXp; hp = MAX_HP; knockouts++;
-          events.push({ k, icon: '☠', title: 'せんとうふのう', text: `ちからつきた… ${lostXp}の EXPを うしなった。HPは ぜんかい した。` });
+          events.push({ k, icon: '☠', title: '戦闘不能', text: `力尽きた… ${lostXp}EXPを失った。HPは全回復した。` });
         }
       }
       boss.dmg += dayXp;
       if (!boss.defeated && boss.dmg >= boss.hp) {
         boss.defeated = k; total += boss.reward; bossWins++;
-        events.push({ k, icon: '⚔', title: 'ボスを たおした', text: `${boss.name}を たおした！ ${boss.reward}の EXPを かくとく！` });
+        events.push({ k, icon: '⚔', title: 'ボスを倒した', text: `${boss.name}を倒した！ ${boss.reward}EXPを獲得！` });
       }
       perDay[k] = { xp: dayXp, done, count, cleared, mult, status, hp, recorded };
     }
@@ -203,7 +209,7 @@
       clearedDays, frozenDays, knockouts, bossWins, mult: today ? today.mult : bonusFor(streak) };
   }
 
-  // ---------- サウンド・しんどう ----------
+  // ---------- サウンド・振動 ----------
   let actx = null;
   function audio() {
     if (!state.sound) return null;
@@ -245,13 +251,12 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const iconHtml = (key, size = 26) => S.icon(key, size) || `<span>${esc(key || '⭐')}</span>`;
-  const fmt = n => Number.isInteger(Number(n)) ? String(Number(n)) : String(Math.round(n * 10) / 10);
+  const fmt = n => Number.isInteger(Number(n)) ? Number(n).toLocaleString() : String(Math.round(n * 10) / 10);
   function toast(msg) {
     const el = document.createElement('div');
     el.className = 'toast'; el.textContent = msg;
     document.body.appendChild(el); setTimeout(() => el.remove(), 2300);
   }
-  // RPG風のメッセージ。しばらくすると消える
   let sayTimer = null;
   function say(html) {
     const el = $('say');
@@ -278,7 +283,7 @@
   $('sheetClose').addEventListener('click', () => { SFX.tap(); closeSheet(); });
   $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) closeSheet(); });
 
-  // ---------- おしらせ（ポスト） ----------
+  // ---------- お知らせ ----------
   function addMail(m) {
     state.inbox.unshift({ id: uid(), k: m.k || todayKey(), icon: m.icon || '✉', title: m.title, text: m.text || '', action: m.action || null, read: false });
     state.inbox = state.inbox.slice(0, 60);
@@ -294,27 +299,26 @@
     const html = state.inbox.length ? state.inbox.map(m => `<div class="mail">
         <div class="mt">${m.read ? '<span style="width:8px"></span>' : '<span class="dot"></span>'}<span>${m.icon} ${esc(m.title)}</span><span class="md">${md(m.k)}</span></div>
         ${m.text ? `<div class="mb">${esc(m.text)}</div>` : ''}
-        ${m.action === 'backup' ? '<div class="mb"><button class="btn sm" data-mail-act="backup">いま バックアップ する</button></div>' : ''}
-      </div>`).join('') : '<div class="dim center" style="padding:20px">おしらせは ありません</div>';
-    openSheet('おしらせ', html, body => {
-      body.onclick = e => { if (e.target.closest('[data-mail-act]')) backup(); };
-    });
+        ${m.action === 'backup' ? '<div class="mb"><button class="btn sm" data-mail-act="backup">今すぐバックアップ</button></div>' : ''}
+      </div>`).join('') : '<div class="dim center" style="padding:20px">お知らせはありません</div>';
+    openSheet('お知らせ', html, body => { body.onclick = e => { if (e.target.closest('[data-mail-act]')) backup(); }; });
     state.inbox.forEach(m => { m.read = true; }); save(); renderBadge();
   }
   $('mailBtn').addEventListener('click', openMail);
   $('helpBtn').addEventListener('click', () => { SFX.tap(); openHelp(); });
   function openHelp() {
     openSheet('ルール', `<ul class="rules">
-      <li>クエストを <span class="y">3ぶんの2</span> いじょう クリアで「たっせい」</li>
-      <li>たっせいで HP＋${HEAL}・🔥れんぞく＋1</li>
-      <li>🔥1にち ごとに EXP＋5%（さいだい ×1.5）</li>
-      <li>🔥3にち ごとに <span class="b">❄おまもり</span> を 1こ ゲット</li>
-      <li>たっせい できない日は ❄を 1こ つかって まもる</li>
-      <li>❄が ないと <span class="r">HP−${DMG_PARTIAL}</span>（きろく なしは <span class="r">−${DMG_NONE}</span>）、🔥は 0に</li>
-      <li>HP 0で せんとうふのう：いまの レベルの EXPが はんぶんに</li>
-      <li>まいしゅう げつようびに ボスが でる。かせいだ EXPが ダメージに</li>
-      <li>はやおきは 30ぷん いないの ちこくなら EXP はんぶん</li>
-      <li>日付の きりかえは ごぜん3じ</li></ul>`);
+      <li>その日のクエストを<span class="y">3分の2以上</span>クリアすると「達成」</li>
+      <li>達成するとHP＋${HEAL}、🔥連続記録＋1</li>
+      <li>🔥連続1日ごとにEXP＋5%（最大×1.5）</li>
+      <li>🔥3日連続ごとに<span class="b">❄氷のお守り</span>を1個獲得</li>
+      <li>未達成の日は❄を1個使って、ダメージと連続記録のリセットを防ぐ</li>
+      <li>❄がない場合、未達成で<span class="r">HP−${DMG_PARTIAL}</span>、記録なしで<span class="r">HP−${DMG_NONE}</span>。連続記録は0に戻る</li>
+      <li>HPが0になると戦闘不能。今のレベルで貯めたEXPの半分を失う</li>
+      <li>毎週月曜にボスが出現。稼いだEXPがそのままダメージになる</li>
+      <li>早起きは30分以内の遅れならEXP半分</li>
+      <li>回数を増やすと獲得EXPも増える</li>
+      <li>日付の切り替えは午前3時</li></ul>`);
   }
 
   // ---------- 描画 ----------
@@ -343,7 +347,6 @@
     collectNews(c);
   }
 
-  // 前回から確定した日の出来事や、バックアップのおすすめをポストに入れる
   function collectNews(c) {
     if (!state.onboarded) return;
     const t = todayKey(), y = addDays(t, -1);
@@ -356,10 +359,10 @@
     const since = state.lastBackup ? daysBetween(state.lastBackup, t) : null;
     const mailedAgo = state.backupMailed ? daysBetween(state.backupMailed, t) : 999;
     if (days >= 3 && (since === null || since >= 7) && mailedAgo >= 7) {
-      addMail({ icon: '📦', title: 'バックアップの おすすめ', text: since === null ? 'きろくは この たんまつの なかだけに あります。きえる まえに ほぞん しておこう。' : `さいごの バックアップから ${since}にち たっています。`, action: 'backup' });
+      addMail({ icon: '📦', title: 'バックアップのおすすめ', text: since === null ? '記録はこの端末の中にしかありません。消える前に保存しておきましょう。' : `最後のバックアップから${since}日経っています。`, action: 'backup' });
       state.backupMailed = t; added++;
     }
-    if (added) { save(); renderBadge(); setTimeout(() => { toast(`📬 おしらせが ${added}けん`); SFX.mail(); }, 400); }
+    if (added) { save(); renderBadge(); setTimeout(() => { toast(`📬 お知らせが${added}件あります`); SFX.mail(); }, 400); }
   }
 
   function renderBoss(c) {
@@ -369,9 +372,9 @@
     $('bossCard').classList.toggle('dead', !!b.defeated);
     $('bossCard').innerHTML = `<div id="bossPic">${S.boss(b.idx, 52)}</div>
       <div class="grow">
-        <div style="display:flex;justify-content:space-between;gap:8px"><span>${b.name}</span><span class="dim">${b.defeated ? '<span class="y">とうばつ！</span>' : daysLeft ? `のこり${daysLeft}にち` : 'きょうまで'}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:8px"><span>${b.name}</span><span class="dim">${b.defeated ? '<span class="y">討伐済み</span>' : daysLeft ? `残り${daysLeft}日` : '今日まで'}</span></div>
         <div class="bar boss"><i style="width:${left / b.hp * 100}%"></i></div>
-        <div class="dim">${b.defeated ? `ほうしゅう ＋${b.reward}EXP ゲット` : `HP ${left}/${b.hp}`}</div>
+        <div class="dim">${b.defeated ? `報酬 ＋${b.reward}EXP 獲得` : `HP ${left}/${b.hp}`}</div>
       </div>`;
   }
 
@@ -383,51 +386,52 @@
     const count = tasks.length;
     $('todayProg').textContent = count ? `${day.done}/${count}` : '';
     if (!count) {
-      $('taskList').innerHTML = `<div class="dim" style="padding:8px 0">${activeTasks().length ? 'きょうは やすみ。' : 'クエストが ありません'}</div>
-        ${activeTasks().length ? '' : '<button class="btn full mt8" data-act="openQuests">クエストを ふやす</button>'}`;
+      $('taskList').innerHTML = `<div class="dim" style="padding:8px 0">${activeTasks().length ? '今日は休みです。' : 'クエストがありません。'}</div>
+        ${activeTasks().length ? '' : '<button class="btn full mt8" data-act="openQuests">クエストを追加</button>'}`;
     } else {
       $('taskList').innerHTML = tasks.map(t => {
         const v = entries[t.id], comp = completion(t, v), done = comp >= 1;
         let sub = '', act = '', extra = '';
-        if (t.type === 'check') {
+        if (t.type === 'check' || t.type === 'bed') {
           sub = `＋${t.xp}EXP`;
           act = done ? `<button class="btn green act" data-act="toggle" data-id="${t.id}">✓ クリア</button>`
             : `<button class="btn act" data-act="toggle" data-id="${t.id}">やった！</button>`;
         } else if (t.type === 'count') {
           sub = `${fmt(t.target)}${esc(t.unit)} ・ ＋${t.xp}EXP`;
           act = done ? `<button class="btn green act" data-act="fill" data-id="${t.id}">✓ クリア</button>`
-            : `<button class="btn act" data-act="fill" data-id="${t.id}">ぜんぶ やった</button>`;
+            : `<button class="btn act" data-act="fill" data-id="${t.id}">完了</button>`;
           extra = `<div class="counter">
-            <button class="btn gray" data-act="minus" data-id="${t.id}" aria-label="へらす">−</button>
+            <button class="btn gray" data-act="minus" data-id="${t.id}" aria-label="減らす">−</button>
             <div class="val">${fmt(v || 0)}<small> / ${fmt(t.target)}${esc(t.unit)}</small></div>
-            <button class="btn gray" data-act="plus" data-id="${t.id}" aria-label="ふやす">＋${fmt(t.step)}</button>
-            <button class="btn sm gray" data-act="editCount" data-id="${t.id}" aria-label="すうじを にゅうりょく">✎</button></div>`;
+            <button class="btn gray" data-act="plus" data-id="${t.id}" aria-label="増やす">＋${fmt(t.step)}</button>
+            <button class="btn sm gray" data-act="editCount" data-id="${t.id}" aria-label="数値を入力">✎</button></div>`;
         } else {
-          sub = `${t.wake}までに ・ ＋${t.xp}EXP`;
+          sub = `${t.wake}までに起床 ・ ＋${t.xp}EXP`;
           act = v ? `<button class="btn ${done ? 'green' : 'gray'} act" data-act="editWake" data-id="${t.id}">${done ? '✓' : comp > 0 ? '△' : '✗'} ${v}</button>`
-            : `<button class="btn act" data-act="now" data-id="${t.id}">おきた！</button>`;
+            : `<button class="btn act" data-act="now" data-id="${t.id}">起きた！</button>`;
         }
         return `<div class="task ${done ? 'done' : ''}"><div class="top-row">
           <div class="ic">${iconHtml(t.icon)}</div>
-          <div class="grow"><div class="tn">${esc(t.name)}</div><div class="sub">${sub}</div></div>
+          <div class="grow"><div class="tn">${esc(taskName(t))}</div><div class="sub">${sub}</div></div>
           ${act}</div>${extra}</div>`;
       }).join('');
     }
+    // 状況（1行）
     let left = '', right = '';
     if (count) {
       if (day.cleared) {
-        left = `<span class="y">★ たっせい！</span>`;
-        right = `<button class="btn sm blue" id="shareDay">Xで シェア</button>`;
+        left = `現在：<span class="y">達成</span>`;
+        right = `<button class="btn sm blue" id="shareDay">Xでシェア</button>`;
       } else {
-        left = `あと <span class="y">${needFor(count) - day.done}こ</span> で たっせい`;
         const dmg = day.recorded ? DMG_PARTIAL : DMG_NONE;
-        right = c.freezes > 0 ? `<span class="b">❄が まもる</span>` : `<span class="r">おわると HP−${dmg}</span>`;
+        left = `現在：<span class="r">未達成</span>${c.freezes > 0 ? '<span class="b">（❄で回避）</span>' : `<span class="r">（HP−${dmg}）</span>`}`;
+        right = `<span>あと<span class="y">${needFor(count) - day.done}個</span>で達成</span>`;
       }
     }
     $('dayLine').innerHTML = `<span>${left}</span>${right}`;
     $('dayLine').classList.toggle('hidden', !count);
     const sb = $('shareDay');
-    if (sb) sb.onclick = () => share(`きょうの クエストを クリア！ Lv${L.lv}「${titleOf(L.lv)}」 🔥れんぞく${c.streak}にち #LifeQuest`);
+    if (sb) sb.onclick = () => share(`今日のクエストを達成！ Lv${L.lv}「${titleOf(L.lv)}」 🔥${c.streak}日連続 #LifeQuest`);
   }
 
   function renderStats(c, L) {
@@ -439,15 +443,15 @@
     $('statList').innerHTML = Object.entries(CATS).map(([k, v]) => `<div class="stat"><span>${v.en}</span>
       <div class="bar"><i style="width:${c.cat[k] / max * 100}%;background:${v.color}"></i></div><span style="text-align:right">${Math.floor(c.cat[k] / 10)}</span></div>`).join('');
     $('kpis').innerHTML = [
-      ['🔥 さいちょう', `${c.best}にち`], ['★ たっせい日', `${c.clearedDays}にち`],
-      ['⚔ ボス とうばつ', `${c.bossWins}たい`], ['❄ つかった', `${c.frozenDays}かい`],
-      ['☠ せんとうふのう', `${c.knockouts}かい`], ['EXP ごうけい', c.total.toLocaleString()],
+      ['🔥 最長連続', `${c.best}日`], ['★ 達成日数', `${c.clearedDays}日`],
+      ['⚔ ボス討伐', `${c.bossWins}体`], ['❄ 使用回数', `${c.frozenDays}回`],
+      ['☠ 戦闘不能', `${c.knockouts}回`], ['累計EXP', c.total.toLocaleString()],
     ].map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('');
   }
   $('titlesBtn').addEventListener('click', () => {
     SFX.tap();
     const lv = levelOf(C.total).lv;
-    openSheet('しょうごう', TITLES.map(([l, n]) => `<div class="eq ${lv >= l ? '' : 'lock'}" style="font-size:15px;padding:6px 0"><span>${lv >= l ? '★ ' + n : '？？？'}</span><span>Lv${l}</span></div>`).join(''));
+    openSheet('称号一覧', TITLES.map(([l, n]) => `<div class="eq ${lv >= l ? '' : 'lock'}" style="font-size:15px;padding:6px 0"><span>${lv >= l ? '★ ' + n : '？？？'}</span><span>Lv${l}</span></div>`).join(''));
   });
 
   function renderLog(c) {
@@ -466,7 +470,7 @@
       html += `<div class="d" style="${bg ? `background:${bg};` : ''}${fg ? `color:${fg};` : ''}${k > t ? 'opacity:.25;' : ''}${k === t ? 'outline:2px solid var(--y);' : ''}">${label}</div>`;
     }
     $('cal').innerHTML = html;
-    $('legend').innerHTML = [['var(--g)', 'ぜんぶ'], ['#1f8a4c', 'たっせい'], ['#1e5a8a', '❄'], ['#8a1f2c', 'ダメージ']].map(([c2, n]) => `<span><i style="background:${c2}"></i>${n}</span>`).join('');
+    $('legend').innerHTML = [['var(--g)', '全クリア'], ['#1f8a4c', '達成'], ['#1e5a8a', '❄で回避'], ['#8a1f2c', 'ダメージ']].map(([c2, n]) => `<span><i style="background:${c2}"></i>${n}</span>`).join('');
 
     const wins = Array(S.BOSSES.length).fill(0), seen = Array(S.BOSSES.length).fill(false);
     Object.values(c.bosses).forEach(b => { seen[b.idx] = true; if (b.defeated) wins[b.idx]++; });
@@ -478,32 +482,36 @@
     if (!wakeTask) { svg.closest('.card').classList.add('hidden'); return; }
     svg.closest('.card').classList.remove('hidden');
     const pts = [];
-    for (let i = 13; i >= 0; i--) { const k = addDays(t, -i); const v = state.log[k]?.[wakeTask.id]; pts.push({ k, m: v ? toMin(v) : null }); }
+    for (let i = 13; i >= 0; i--) {
+      const k = addDays(t, -i);
+      const v = state.tasks.filter(x => x.type === 'wake').map(x => state.log[k]?.[x.id]).find(Boolean);
+      pts.push({ k, m: v ? toMin(v) : null });
+    }
     const goal = toMin(wakeTask.wake);
     const vals = pts.filter(p => p.m != null).map(p => p.m).concat(goal);
     const lo = Math.floor((Math.min(...vals) - 30) / 60) * 60, hi = Math.ceil((Math.max(...vals) + 30) / 60) * 60;
     const X = i => 34 + i * (276 / 13), Y = m => 10 + (m - lo) / (hi - lo) * 110;
     const step = hi - lo > 360 ? 120 : 60;
     let s = '';
-    for (let h = lo; h <= hi; h += step) s += `<line x1="34" x2="310" y1="${Y(h)}" y2="${Y(h)}" stroke="#ffffff22"/><text x="28" y="${Y(h) + 4}" fill="#9a9ad0" font-size="10" text-anchor="end">${h / 60}じ</text>`;
+    for (let h = lo; h <= hi; h += step) s += `<line x1="34" x2="310" y1="${Y(h)}" y2="${Y(h)}" stroke="#ffffff22"/><text x="28" y="${Y(h) + 4}" fill="#9a9ad0" font-size="10" text-anchor="end">${h / 60}時</text>`;
     s += `<line x1="34" x2="310" y1="${Y(goal)}" y2="${Y(goal)}" stroke="#fce35a" stroke-dasharray="4 3"/>`;
     pts.forEach((p, i) => { if (p.m != null) s += `<rect x="${X(i) - 4}" y="${Y(p.m) - 4}" width="8" height="8" fill="${p.m <= goal ? '#3cdc6c' : '#ff4a4a'}"/>`; });
-    s += `<text x="34" y="136" fill="#9a9ad0" font-size="9">${md(pts[0].k)}</text><text x="310" y="136" fill="#9a9ad0" font-size="9" text-anchor="end">きょう</text>`;
+    s += `<text x="34" y="136" fill="#9a9ad0" font-size="9">${md(pts[0].k)}</text><text x="310" y="136" fill="#9a9ad0" font-size="9" text-anchor="end">今日</text>`;
     svg.innerHTML = s;
   }
 
   function levelUp(from, to, c) {
     const lines = [];
     const tNew = titleOf(to);
-    if (tNew !== titleOf(from)) lines.push(`しょうごう「<span class="y">${tNew}</span>」`);
-    if (slotsFor(to) > slotsFor(from)) lines.push(`クエストわく <span class="y">${slotsFor(to)}</span> に ふえた`);
-    S.EQUIP.filter(([lv]) => lv > from && lv <= to).forEach(([, n]) => lines.push(`そうび「<span class="y">${n}</span>」`));
+    if (tNew !== titleOf(from)) lines.push(`称号「<span class="y">${tNew}</span>」`);
+    if (slotsFor(to) > slotsFor(from)) lines.push(`クエスト枠が<span class="y">${slotsFor(to)}</span>に増えた`);
+    S.EQUIP.filter(([lv]) => lv > from && lv <= to).forEach(([, n]) => lines.push(`装備「<span class="y">${n}</span>」`));
     $('lvHero').innerHTML = S.hero(to, 96);
     $('lvModalNum').textContent = to;
-    $('lvModalInfo').innerHTML = lines.join('<br>') || 'ちからが みなぎる！';
-    $('lvShare').onclick = () => share(`Life Quest で Lv${to}「${tNew}」に なった！ 🔥れんぞく${c.streak}にち #LifeQuest`);
+    $('lvModalInfo').innerHTML = lines.join('<br>') || '力がみなぎる！';
+    $('lvShare').onclick = () => share(`Life QuestでLv${to}「${tNew}」になった！ 🔥${c.streak}日連続 #LifeQuest`);
     $('lvModal').classList.remove('hidden');
-    addMail({ icon: '★', title: `Lv${to}に なった`, text: lines.join('・').replace(/<[^>]+>/g, '') });
+    addMail({ icon: '★', title: `Lv${to}になった`, text: lines.join('・').replace(/<[^>]+>/g, '') });
     flash(); SFX.level(); vibrate([80, 60, 80, 60, 200]);
   }
   $('lvClose').addEventListener('click', () => { SFX.tap(); $('lvModal').classList.add('hidden'); });
@@ -523,14 +531,14 @@
     const nowDone = isDone(t, (state.log[k] || {})[id]);
     const name = esc(state.name), bossName = after.boss.name;
     if (after.bossWins > before.bossWins) {
-      say(`${name}の こうげき！<br>${bossName}を たおした！ ＋${after.boss.reward}EXP`); SFX.boss(); vibrate([100, 50, 300]); flash();
+      say(`${name}の攻撃！<br>${bossName}を倒した！ ＋${after.boss.reward}EXP`); SFX.boss(); vibrate([100, 50, 300]); flash();
     } else if (after.perDay[k]?.cleared && !before.perDay[k]?.cleared) {
-      say(`きょうの クエスト たっせい！<br>HP＋${HEAL}${after.freezes > before.freezes ? '・❄を てにいれた！' : ''}`);
+      say(`今日のクエストを達成！<br>HP＋${HEAL}${after.freezes > before.freezes ? '・❄氷のお守りを手に入れた！' : ''}`);
       SFX.clear(); if (after.freezes > before.freezes) setTimeout(SFX.freeze, 450); vibrate([60, 40, 120]);
     } else if (nowDone && !wasDone) {
-      say(`${esc(t.name)}を やりとげた！<br>${bossName}に <span class="r">${diff}</span>の ダメージ！`); SFX.done(); vibrate(40);
+      say(`${esc(taskName(t))}をやり遂げた！<br>${bossName}に<span class="r">${diff}</span>のダメージ！`); SFX.done(); vibrate(40);
     } else if (diff > 0) {
-      say(`${bossName}に <span class="r">${diff}</span>の ダメージ！`); SFX.hit(); vibrate(20);
+      say(`${bossName}に<span class="r">${diff}</span>のダメージ！`); SFX.hit(); vibrate(20);
     } else if (diff < 0) SFX.undo();
     render();
     if (diff > 0) { const p = document.querySelector('#bossPic svg'); if (p) { p.classList.remove('hit'); void p.offsetWidth; p.classList.add('hit'); } }
@@ -548,18 +556,18 @@
       case 'plus': setEntry(id, Math.round((num + t.step) * 100) / 100); break;
       case 'minus': setEntry(id, Math.max(0, Math.round((num - t.step) * 100) / 100) || null); break;
       case 'now': { const d = new Date(); setEntry(id, `${pad(d.getHours())}:${pad(d.getMinutes())}`); break; }
-      case 'editCount': SFX.tap(); openSheet(t.name, `<label class="lb">きょうの きろく（${esc(t.unit)}）</label>
+      case 'editCount': SFX.tap(); openSheet(taskName(t), `<label class="lb">今日の記録（${esc(t.unit)}）</label>
           <input id="eNum" type="number" inputmode="decimal" min="0" step="any" value="${cur ?? ''}" placeholder="0">
-          <div class="dim mt8">もくひょう ${fmt(t.target)}${esc(t.unit)}</div>
-          <div class="row mt12"><button class="btn gray" id="eClear">けす</button><button class="btn" id="eOk">けってい</button></div>`, body => {
+          <div class="dim mt8">目標 ${fmt(t.target)}${esc(t.unit)}</div>
+          <div class="row mt12"><button class="btn gray" id="eClear">記録を消す</button><button class="btn" id="eOk">保存</button></div>`, body => {
             const inp = body.querySelector('#eNum'); setTimeout(() => inp.focus(), 50);
             body.querySelector('#eOk').onclick = () => { closeSheet(); setEntry(id, inp.value === '' ? null : Math.max(0, Number(inp.value))); };
             body.querySelector('#eClear').onclick = () => { closeSheet(); setEntry(id, null); };
           }); break;
-      case 'editWake': SFX.tap(); openSheet(t.name, `<label class="lb">おきた じかん</label>
+      case 'editWake': SFX.tap(); openSheet(taskName(t), `<label class="lb">起床時刻</label>
           <input id="eTime" type="time" value="${cur ?? ''}">
-          <div class="dim mt8">もくひょう ${t.wake}</div>
-          <div class="row mt12"><button class="btn gray" id="eClear">けす</button><button class="btn" id="eOk">けってい</button></div>`, body => {
+          <div class="dim mt8">目標 ${t.wake}</div>
+          <div class="row mt12"><button class="btn gray" id="eClear">記録を消す</button><button class="btn" id="eOk">保存</button></div>`, body => {
             body.querySelector('#eOk').onclick = () => { const v = body.querySelector('#eTime').value; closeSheet(); setEntry(id, v || null); };
             body.querySelector('#eClear').onclick = () => { closeSheet(); setEntry(id, null); };
           }); break;
@@ -579,28 +587,28 @@
 
   // ---------- メニュー ----------
   const MENU = [
-    ['📜', 'クエストの へんしゅう', () => openQuests()],
-    ['💬', 'しつもんに こたえなおす', () => startOnboarding(true)],
-    ['✎', 'なまえ', () => openName()],
-    ['♪', 'サウンド・しんどう', () => openSound()],
-    ['⏰', 'リマインダー', () => openReminder()],
-    ['📦', 'バックアップ・ふっかつ', () => openBackup()],
-    ['📲', 'アプリを インストール', () => openInstall()],
+    ['📜', 'クエスト編集', () => openQuests()],
+    ['💬', '質問に答え直す', () => startOnboarding(true)],
+    ['✎', '名前の変更', () => openName()],
+    ['♪', 'サウンド・振動', () => openSound()],
+    ['⏰', '通知', () => openReminder()],
+    ['📦', 'バックアップ・復元', () => openBackup()],
+    ['📲', 'インストール', () => openInstall()],
     ['？', 'ルール', () => openHelp()],
-    ['⚠', 'さいしょから やりなおす', () => openReset(), 'danger'],
+    ['⚠', 'データを全て削除', () => openReset(), 'danger'],
   ];
   $('menuList').innerHTML = MENU.map(([ic, label, , cls], i) => `<button class="btn ${cls || ''}" data-menu="${i}"><span class="mi">${ic}</span>${label}<span class="arrow">▶</span></button>`).join('');
   $('menuList').addEventListener('click', e => { const b = e.target.closest('[data-menu]'); if (b) { SFX.tap(); MENU[b.dataset.menu][2](); } });
 
   function openName() {
-    openSheet('なまえ', `<input id="nm" maxlength="12" value="${esc(state.name)}"><div class="row mt12"><button class="btn" id="nmOk">けってい</button></div>`, body => {
-      body.querySelector('#nmOk').onclick = () => { state.name = body.querySelector('#nm').value.trim() || 'ぼうけんしゃ'; save(); closeSheet(); render(); };
+    openSheet('名前の変更', `<input id="nm" maxlength="12" value="${esc(state.name)}"><div class="row mt12"><button class="btn" id="nmOk">保存</button></div>`, body => {
+      body.querySelector('#nmOk').onclick = () => { state.name = body.querySelector('#nm').value.trim() || '冒険者'; save(); closeSheet(); render(); };
     });
   }
   function openSound() {
-    openSheet('サウンド・しんどう', `
-      <label class="lb">こうかおん</label><div class="seg"><button class="btn ${state.sound ? 'on' : ''}" data-s="1">ON</button><button class="btn ${!state.sound ? 'on' : ''}" data-s="0">OFF</button></div>
-      <label class="lb">しんどう（Androidのみ）</label><div class="seg"><button class="btn ${state.vibe ? 'on' : ''}" data-v="1">ON</button><button class="btn ${!state.vibe ? 'on' : ''}" data-v="0">OFF</button></div>`, body => {
+    openSheet('サウンド・振動', `
+      <label class="lb">効果音</label><div class="seg"><button class="btn ${state.sound ? 'on' : ''}" data-s="1">ON</button><button class="btn ${!state.sound ? 'on' : ''}" data-s="0">OFF</button></div>
+      <label class="lb">振動（Androidのみ）</label><div class="seg"><button class="btn ${state.vibe ? 'on' : ''}" data-v="1">ON</button><button class="btn ${!state.vibe ? 'on' : ''}" data-v="0">OFF</button></div>`, body => {
       body.onclick = e => {
         const b = e.target.closest('button'); if (!b) return;
         if (b.dataset.s) state.sound = b.dataset.s === '1';
@@ -610,25 +618,26 @@
     });
   }
 
-  // ---------- クエストの へんしゅう ----------
+  // ---------- クエスト編集 ----------
   function openQuests() {
     const L = levelOf(C.total), act = activeTasks(), slots = slotsFor(L.lv), nx = nextSlotLv(L.lv);
     const full = act.length >= slots;
-    openSheet(`クエスト ${act.length}/${slots}`, `${act.map(t => {
-        const days = t.days.length === 7 ? 'まいにち' : ALL_DAYS.filter(d => t.days.includes(d)).map(d => WD[d]).join('');
+    openSheet(`クエスト編集（${act.length}/${slots}）`, `${act.map(t => {
+        const days = t.days.length === 7 ? '毎日' : ALL_DAYS.filter(d => t.days.includes(d)).map(d => WD[d]).join('');
+        const what = t.type === 'count' ? `${fmt(t.target)}${esc(t.unit)}` : t.type === 'wake' ? `${t.wake}起床` : '';
         return `<div class="list-row"><div class="ic">${iconHtml(t.icon, 22)}</div>
-          <div class="grow">${esc(t.name)}<div class="dim">${days}${t.from && t.from > todayKey() ? ' ・ <span class="y">あしたから</span>' : ''}</div></div>
-          <button class="btn sm gray" data-q="up" data-id="${t.id}" aria-label="うえへ">↑</button>
-          <button class="btn sm blue" data-q="edit" data-id="${t.id}">へんしゅう</button></div>`;
-      }).join('') || '<div class="dim">クエストが ありません</div>'}
-      <button class="btn full mt12" data-q="add" ${full ? 'disabled' : ''}>＋ クエストを ふやす</button>
-      ${full ? `<div class="dim center mt8">わくが いっぱい${nx ? `（Lv${nx}で ふえる）` : ''}</div>` : ''}`, body => {
+          <div class="grow">${esc(taskName(t))}<div class="dim">${[what, days, `${t.xp}EXP`].filter(Boolean).join(' ・ ')}${t.from && t.from > todayKey() ? ' ・ <span class="y">明日から</span>' : ''}</div></div>
+          <button class="btn sm gray" data-q="up" data-id="${t.id}" aria-label="上へ">↑</button>
+          <button class="btn sm blue" data-q="edit" data-id="${t.id}">編集</button></div>`;
+      }).join('') || '<div class="dim">クエストがありません</div>'}
+      <button class="btn full mt12" data-q="add" ${full ? 'disabled' : ''}>＋ クエストを追加</button>
+      ${full ? `<div class="dim center mt8">枠がいっぱいです${nx ? `（Lv${nx}で増加）` : ''}</div>` : ''}`, body => {
       body.onclick = e => {
         const b = e.target.closest('[data-q]'); if (!b || b.disabled) return;
         SFX.tap();
         const i = state.tasks.findIndex(t => t.id === b.dataset.id);
-        if (b.dataset.q === 'add') openTaskForm(-1);
-        if (b.dataset.q === 'edit') openTaskForm(i);
+        if (b.dataset.q === 'add') openPicker('muscle');
+        if (b.dataset.q === 'edit') openTaskEdit(state.tasks[i]);
         if (b.dataset.q === 'up') {
           const a = activeTasks(), pos = a.indexOf(state.tasks[i]);
           if (pos > 0) { const j = state.tasks.indexOf(a[pos - 1]); [state.tasks[j], state.tasks[i]] = [state.tasks[i], state.tasks[j]]; save(); render(); openQuests(); }
@@ -636,95 +645,121 @@
       };
     });
   }
-  function openTaskForm(i) {
-    const editing = i >= 0;
-    let t = editing ? JSON.parse(JSON.stringify(state.tasks[i])) : { icon: 'star', name: '', type: 'check', cat: 'str', xp: 20, target: 10, unit: '回', wake: '06:30', days: ALL_DAYS.slice() };
-    const used = new Set(activeTasks().map(x => x.tpl));
-    const draw = () => openSheet(editing ? 'クエストを へんしゅう' : 'クエストを ふやす', `
-      ${editing ? '' : `<label class="lb">おすすめから えらぶ</label><div class="chips">${CATALOG.filter(x => !used.has(x.key)).map(x => `<button class="btn sm gray" data-tpl="${x.key}">${S.icon(x.icon, 14)}${x.name}</button>`).join('')}</div>`}
-      <label class="lb">なまえ</label><input id="fName" maxlength="20" value="${esc(t.name)}" placeholder="れい：ストレッチ">
-      <label class="lb">アイコン</label><div class="icons">${S.ICON_KEYS.map(k => `<button class="btn ${k === t.icon ? 'on' : ''}" data-icon="${k}">${S.icon(k, 20)}</button>`).join('')}</div>
-      <label class="lb">しゅるい</label><div class="seg">${[['check', 'やった？'], ['count', 'かいすう'], ['wake', 'きしょう']].map(([v, n]) => `<button class="btn ${t.type === v ? 'on' : ''}" data-type="${v}">${n}</button>`).join('')}</div>
-      ${t.type === 'count' ? `<div class="row"><div><label class="lb">もくひょう</label><input id="fTarget" type="number" inputmode="decimal" min="0.1" step="any" value="${t.target ?? 10}"></div>
-        <div><label class="lb">たんい</label><input id="fUnit" maxlength="6" value="${esc(t.unit ?? '回')}"></div></div>` : ''}
-      ${t.type === 'wake' ? `<label class="lb">もくひょうの じかん</label><input id="fWake" type="time" value="${t.wake ?? '06:30'}">` : ''}
-      <label class="lb">のうりょく</label><div class="seg">${Object.entries(CATS).map(([k, v]) => `<button class="btn ${t.cat === k ? 'on' : ''}" data-cat="${k}">${v.en}</button>`).join('')}</div>
-      <label class="lb">EXP</label><div class="seg">${[10, 15, 20, 30].map(x => `<button class="btn ${t.xp === x ? 'on' : ''}" data-xp="${x}">${x}</button>`).join('')}</div>
-      <label class="lb">やる ようび</label><div class="days">${[1, 2, 3, 4, 5, 6, 0].map(d => `<button class="btn ${t.days.includes(d) ? 'on' : ''}" data-day="${d}">${WD[d]}</button>`).join('')}</div>
-      <div class="row mt12">${editing ? '<button class="btn red" id="fDel">けす</button>' : ''}<button class="btn" id="fSave">けってい</button></div>`, body => {
-      const keep = () => {
-        const n = body.querySelector('#fName'); if (n) t.name = n.value;
-        const tg = body.querySelector('#fTarget'); if (tg) t.target = Number(tg.value) || t.target;
-        const u = body.querySelector('#fUnit'); if (u) t.unit = u.value;
-        const w = body.querySelector('#fWake'); if (w) t.wake = w.value || t.wake;
-      };
+
+  // 一覧から選ぶ（自分で新しく作ることはできない）
+  function openPicker(group) {
+    const p = prefs();
+    const used = new Set(activeTasks().map(t => t.tpl));
+    const list = CAT.LIST.filter(x => x.group === group);
+    openSheet('クエストを追加', `<div class="seg wrap-seg">${Object.entries(CAT.GROUPS).map(([g, n]) => `<button class="btn ${g === group ? 'on' : ''}" data-g="${g}">${n}</button>`).join('')}</div>
+      <div class="mt8">${list.map(x => {
+        const has = used.has(x.key);
+        const what = x.type === 'count' ? `${fmt(recTarget(x, p))}${x.unit} ・ ` : '';
+        return `<button class="btn gray full pick-row" data-k="${x.key}" ${has ? 'disabled' : ''}>${S.icon(x.icon, 20)}<span class="grow" style="text-align:left">${x.name}<br><small class="dim">${has ? '追加済み' : `${what}＋${xpFor(x, x.type === 'count' ? recTarget(x, p) : 0)}EXP`}</small></span><span class="arrow">▶</span></button>`;
+      }).join('')}</div>`, body => {
       body.onclick = e => {
-        const b = e.target.closest('button'); if (!b) return;
-        keep(); SFX.tap();
-        const d = b.dataset;
-        if (d.tpl) { const x = CATALOG.find(c => c.key === d.tpl); t = Object.assign(fromTemplate(x, prefs()), { days: t.days }); return draw(); }
-        if (d.icon) { t.icon = d.icon; return draw(); }
-        if (d.type) { t.type = d.type; return draw(); }
-        if (d.cat) { t.cat = d.cat; return draw(); }
-        if (d.xp) { t.xp = Number(d.xp); return draw(); }
-        if (d.day) { const n = Number(d.day); t.days = t.days.includes(n) ? t.days.filter(x => x !== n) : t.days.concat(n); return draw(); }
-        if (b.id === 'fDel') {
-          if (confirm(`「${state.tasks[i].name}」を けしますか？（かせいだ EXPは のこります）`)) { state.tasks[i].archivedAt = todayKey(); save(); render(); openQuests(); }
-          return;
-        }
-        if (b.id === 'fSave') {
-          t.name = (t.name || '').trim();
-          if (!t.name) { draw(); $('sheetBody').querySelector('#fName').focus(); return; }
-          if (!t.days.length) { alert('ようびを 1つ いじょう えらんでください'); return; }
-          const out = { id: editing ? state.tasks[i].id : uid(), tpl: t.tpl || null, icon: t.icon, name: t.name, type: t.type, cat: t.cat, xp: t.xp, days: t.days.slice().sort() };
-          if (editing && state.tasks[i].from) out.from = state.tasks[i].from;
-          if (t.type === 'count') { out.target = Math.max(0.1, Number(t.target) || 1); out.unit = (t.unit || '').trim(); out.step = t.step && t.step < out.target ? t.step : autoStep(out.target, out.unit); }
-          if (t.type === 'wake') out.wake = t.wake || '06:30';
-          if (editing) state.tasks[i] = out; else state.tasks.push(out);
-          save(); SFX.done(); render(); openQuests();
-        }
+        const b = e.target.closest('button'); if (!b || b.disabled) return;
+        SFX.tap();
+        if (b.dataset.g) return openPicker(b.dataset.g);
+        if (b.dataset.k) openTaskEdit(null, CAT.get(b.dataset.k));
       };
     });
-    draw();
   }
 
-  // ---------- はじめての しつもん ----------
+  // 編集：回数は適性の範囲内のみ。EXPは回数から自動。時刻は自由
+  function openTaskEdit(task, tplForNew) {
+    const p = prefs();
+    const x = tplForNew || CAT.get(task.tpl);
+    const isNew = !task;
+    const draft = isNew ? makeTask(x, p) : JSON.parse(JSON.stringify(task));
+    const legacy = !x;
+    const range = x && x.type === 'count' ? rangeFor(x, p) : null;
+    if (range) draft.target = Math.min(range[1], Math.max(range[0], draft.target));
+    const draw = () => {
+      if (x && x.type === 'count') draft.xp = xpFor(x, draft.target);
+      openSheet(isNew ? 'クエストを追加' : 'クエストを編集', `
+        <div class="edit-head">${iconHtml(draft.icon, 32)}<span>${esc(taskName(draft))}</span></div>
+        ${legacy ? '<div class="dim mt8">このクエストは目標を変更できません（曜日と削除のみ）</div>' : ''}
+        ${!legacy && draft.type === 'count' ? `<label class="lb">目標（適性の範囲：${fmt(range[0])}〜${fmt(range[1])}${x.unit}）</label>
+          <div class="stepper"><button class="btn gray" data-t="-" ${draft.target <= range[0] ? 'disabled' : ''}>−</button>
+            <div class="sv">${fmt(draft.target)}<small>${x.unit}</small></div>
+            <button class="btn gray" data-t="+" ${draft.target >= range[1] ? 'disabled' : ''}>＋</button></div>` : ''}
+        ${!legacy && draft.type === 'wake' ? `<label class="lb">起床の目標時刻</label><input id="fWake" type="time" value="${draft.wake}">` : ''}
+        ${!legacy && draft.type === 'bed' ? `<label class="lb">就寝の目標時刻</label><input id="fBed" type="time" value="${draft.bedtime}">` : ''}
+        <div class="xpline">獲得EXP <span class="y">＋${draft.xp}</span>${!legacy && draft.type === 'count' ? '<span class="dim">（回数に比例）</span>' : ''}</div>
+        <label class="lb">実施する曜日</label><div class="days">${[1, 2, 3, 4, 5, 6, 0].map(d => `<button class="btn ${draft.days.includes(d) ? 'on' : ''}" data-day="${d}">${WD[d]}</button>`).join('')}</div>
+        <div class="row mt12">${isNew ? '<button class="btn gray" id="fBack">戻る</button>' : '<button class="btn red" id="fDel">削除</button>'}<button class="btn" id="fSave">${isNew ? '追加' : '保存'}</button></div>`, body => {
+        const keep = () => {
+          const w = body.querySelector('#fWake'); if (w && w.value) draft.wake = w.value;
+          const bd = body.querySelector('#fBed'); if (bd && bd.value) draft.bedtime = bd.value;
+        };
+        body.onclick = e => {
+          const b = e.target.closest('button'); if (!b || b.disabled) return;
+          keep(); SFX.tap();
+          const d = b.dataset;
+          if (d.t) { const st = draft.step || stepOf(x, p); draft.target = Math.round((draft.target + (d.t === '+' ? st : -st)) * 100) / 100; draft.target = Math.min(range[1], Math.max(range[0], draft.target)); return draw(); }
+          if (d.day) { const n = Number(d.day); draft.days = draft.days.includes(n) ? draft.days.filter(v => v !== n) : draft.days.concat(n); return draw(); }
+          if (b.id === 'fBack') return openPicker(x.group);
+          if (b.id === 'fDel') {
+            openSheet('クエストを削除', `<div>「${esc(taskName(task))}」を削除します。これまでに獲得したEXPは残ります。</div>
+              <div class="row mt12"><button class="btn gray" id="dNo">やめる</button><button class="btn red" id="dYes">削除</button></div>`, bb => {
+              bb.querySelector('#dNo').onclick = () => openTaskEdit(task);
+              bb.querySelector('#dYes').onclick = () => { task.archivedAt = todayKey(); save(); render(); openQuests(); };
+            });
+            return;
+          }
+          if (b.id === 'fSave') {
+            if (!draft.days.length) { toast('曜日を1つ以上選んでください'); return; }
+            draft.days.sort();
+            if (isNew) state.tasks.push(draft);
+            else saveEdit(task, draft);
+            save(); SFX.done(); render(); openQuests();
+          }
+        };
+      });
+    };
+    draw();
+  }
+  // 目標を変えたときは、過去の記録の判定が変わらないよう「新しいクエスト」として今日から切り替える
+  function saveEdit(task, draft) {
+    const scoring = task.target !== draft.target || task.wake !== draft.wake || task.bedtime !== draft.bedtime;
+    const t = todayKey();
+    const hasPast = Object.keys(state.log).some(k => k < t && state.log[k][task.id] != null);
+    if (!scoring || !hasPast) { Object.assign(task, draft); return; }
+    const nt = Object.assign({}, draft, { id: uid(), from: t });
+    delete nt.archivedAt;
+    task.archivedAt = t;
+    if (state.log[t] && state.log[t][task.id] != null) { state.log[t][nt.id] = state.log[t][task.id]; delete state.log[t][task.id]; }
+    state.tasks.splice(state.tasks.indexOf(task) + 1, 0, nt);
+  }
+
+  // ---------- 最初の質問 ----------
   let ob = null;
-  function prefs() { return state.prefs || { fit: 1, time: 1, wake: '06:30' }; }
-  function fromTemplate(x, p) {
-    const idx = x.scale === 'time' ? p.time : p.fit;
-    const t = { tpl: x.key, icon: x.icon, name: x.name, type: x.type, cat: x.cat, xp: x.xp, days: ALL_DAYS.slice() };
-    if (x.type === 'count') { t.target = x.targets[idx]; t.unit = x.unit; t.step = x.steps[idx]; }
-    if (x.type === 'wake') t.wake = p.wake || '06:30';
-    return t;
-  }
-  function timeOf(x, p) {
-    if (x.timeIsTarget) return x.targets[x.scale === 'time' ? p.time : p.fit];
-    return Array.isArray(x.time) ? x.time[p.time] : (x.time || 0);
-  }
   function recommend(p, slots) {
     const budget = [15, 30, 60][p.time];
     const goals = p.goals.length ? p.goals : Object.keys(GOALS);
-    const pool = CATALOG.filter(x => !(x.minFit && p.fit < x.minFit) && !(x.maxFit !== undefined && p.fit > x.maxFit))
-      .map(x => ({ x, score: goals.reduce((a, g) => a + (x.goals[g] || 0), 0) * 2 + 1 + (x.key === 'wake' && p.wakeAsked ? 4 : 0) }))
+    const timeOf = x => Array.isArray(x.time) ? x.time[idxFor(x, p)] : (x.time || 0);
+    const pool = CAT.LIST.filter(x => !x.eq && !(x.minFit && p.fit < x.minFit) && !(x.maxFit !== undefined && p.fit > x.maxFit))
+      .map(x => ({ x, score: goals.reduce((a, g) => a + (x.goals[g] || 0), 0) * 2 + 1 + (x.key === 'wake' && p.wakeAsked ? 4 : 0)
+        - Math.max(0, (x.d || 1) - 1 - p.fit) * 8 }))
       .sort((a, b) => b.score - a.score);
-    const picks = [], cats = {};
+    const picks = [], groups = {};
     let used = 0;
     for (const strict of [true, false]) {
       while (picks.length < slots) {
         let best = null;
         for (const r of pool) {
           if (picks.includes(r)) continue;
-          const tm = timeOf(r.x, p);
+          const tm = timeOf(r.x);
           if (strict && tm > 0 && used + tm > budget) continue;
-          const s = r.score - (cats[r.x.cat] || 0) * 5 - (strict ? 0 : tm / 5);
+          const s = r.score - (groups[r.x.group] || 0) * 5 - (strict ? 0 : tm / 5);
           if (!best || s > best.s) best = { r, s };
         }
         if (!best) break;
-        picks.push(best.r); cats[best.r.x.cat] = (cats[best.r.x.cat] || 0) + 1; used += timeOf(best.r.x, p);
+        picks.push(best.r); groups[best.r.x.group] = (groups[best.r.x.group] || 0) + 1; used += timeOf(best.r.x);
       }
     }
-    const rest = pool.filter(r => !picks.includes(r));
+    const rest = pool.filter(r => !picks.includes(r)).slice(0, 12);
     return { picks: picks.map(r => r.x.key), order: picks.concat(rest).map(r => r.x.key) };
   }
   function startOnboarding(redo) {
@@ -735,48 +770,48 @@
     renderOb();
   }
   const OB_STEPS = 6;
-  const WAKES = [['5じだい', '05:30'], ['6じだい', '06:30'], ['7じだい', '07:30'], ['8じ いこう', '08:30'], ['きまって いない', null]];
+  const WAKES = [['5時台', '05:30'], ['6時台', '06:30'], ['7時台', '07:30'], ['8時以降', '08:30'], ['決まっていない', null]];
   function obPrefs() {
     const usual = ob.wakeH != null ? WAKES[ob.wakeH][1] : null;
     return { fit: ob.fit ?? 1, time: ob.time ?? 1, goals: ob.goals, wake: usual ? fromMin(toMin(usual) - 30) : '07:00', wakeAsked: !!usual };
   }
   function renderOb() {
-    const back = ob.step > 0 ? '<button class="btn gray" data-ob="back">もどる</button>' : (ob.redo ? '<button class="btn gray" data-ob="close">やめる</button>' : '');
+    const back = ob.step > 0 ? '<button class="btn gray" data-ob="back">戻る</button>' : (ob.redo ? '<button class="btn gray" data-ob="close">やめる</button>' : '');
     const choice = (attr, items, sel) => `<div class="choices">${items.map(([a, b], i) => `<button class="btn ${sel === i ? 'on' : ''}" ${attr}="${i}">${a}${b ? `<small>${b}</small>` : ''}</button>`).join('')}</div>`;
     let talk = '', body = '', next = '';
     switch (ob.step) {
       case 0:
-        talk = ob.redo ? 'しつもんに こたえて、いまの きみに あった クエストを えらびなおそう。' : 'ようこそ、ぼうけんしゃよ！ まいにちの しゅうかんで つよくなる せかいへ。まずは なまえを おしえてほしい。';
+        talk = ob.redo ? '質問に答えて、今の自分に合ったクエストを選び直そう。' : 'ようこそ、冒険者よ！ ここは毎日の習慣で強くなる世界。まずは名前を教えてほしい。';
         body = `<input id="obName" maxlength="12" value="${esc(ob.name)}">`;
-        next = '<button class="btn" data-ob="next">つぎへ</button>';
+        next = '<button class="btn" data-ob="next">次へ</button>';
         break;
       case 1:
-        talk = `${ob.name}よ、なにを めざして いる？（3つまで）`;
+        talk = `${ob.name}よ、何を目指している？（3つまで選べる）`;
         body = `<div class="choices">${Object.entries(GOALS).map(([k, v]) => `<button class="btn ${ob.goals.includes(k) ? 'on' : ''}" data-goal="${k}">${ob.goals.includes(k) ? '✓ ' : ''}${v}</button>`).join('')}</div>`;
-        next = `<button class="btn" data-ob="next" ${ob.goals.length ? '' : 'disabled'}>つぎへ</button>`;
+        next = `<button class="btn" data-ob="next" ${ob.goals.length ? '' : 'disabled'}>次へ</button>`;
         break;
       case 2:
-        talk = 'ふだん、うんどうは している？';
-        body = choice('data-fit', [['ほとんど しない', 'これから はじめたい'], ['しゅうに 1〜2かい', 'たまに からだを うごかす'], ['しゅうに 3かい いじょう', 'しゅうかんに なっている']], ob.fit);
+        talk = '普段、運動はしている？';
+        body = choice('data-fit', [['ほとんどしない', 'これから始めたい'], ['週に1〜2回', 'たまに体を動かす'], ['週に3回以上', '習慣になっている']], ob.fit);
         break;
       case 3:
-        talk = '1にちに どれくらい じかんを つかえる？';
-        body = choice('data-time', [['15ふん くらい'], ['30ふん くらい'], ['1じかん いじょう']], ob.time);
+        talk = '1日にどれくらい時間を使える？';
+        body = choice('data-time', [['15分くらい'], ['30分くらい'], ['1時間以上']], ob.time);
         break;
       case 4:
-        talk = 'ふだん なんじごろ おきている？';
-        body = choice('data-wake', WAKES.map(([a, v]) => [a, `もくひょう ${v ? fromMin(toMin(v) - 30) : '07:00'}`]), ob.wakeH);
+        talk = '普段、何時ごろに起きている？';
+        body = choice('data-wake', WAKES.map(([a, v]) => [a, `目標 ${v ? fromMin(toMin(v) - 30) : '07:00'}`]), ob.wakeH);
         break;
       case 5: {
-        talk = `${ob.name}に おすすめの クエストだ！ さいしょは ${ob.slots}こ。レベルが あがると ふやせる。`;
+        talk = `${ob.name}におすすめのクエストだ！ 最初は${ob.slots}個から。レベルが上がると増やせる。`;
         const p = obPrefs();
-        body = `<div class="dim" style="margin-bottom:8px">えらんだ ${ob.picks.length}/${ob.slots}（タップで いれかえ）</div><div class="choices">${ob.order.map(key => {
-          const x = CATALOG.find(c => c.key === key), t = fromTemplate(x, p), on = ob.picks.includes(key);
-          const what = t.type === 'count' ? `${fmt(t.target)}${t.unit}` : t.type === 'wake' ? `${t.wake}までに` : 'まいにち';
+        body = `<div class="dim" style="margin-bottom:8px">選択中 ${ob.picks.length}/${ob.slots}（タップで入れ替え）</div><div class="choices">${ob.order.map(key => {
+          const x = CAT.get(key), t = makeTask(x, p), on = ob.picks.includes(key);
+          const what = t.type === 'count' ? `${fmt(t.target)}${t.unit}` : t.type === 'wake' ? `${t.wake}までに起床` : t.type === 'bed' ? '' : '毎日';
           return `<button class="btn ${on ? 'on' : ''}" data-pick="${key}" ${!on && ob.picks.length >= ob.slots ? 'style="opacity:.5"' : ''}>
-            <span class="pick">${on ? '✓' : '　'} ${S.icon(x.icon, 20)} ${x.name}</span><small>${what} ・ ＋${x.xp}EXP</small></button>`;
+            <span class="pick">${on ? '✓' : '　'} ${S.icon(x.icon, 20)} ${esc(taskName(t))}</span><small>${[what, `＋${t.xp}EXP`].filter(Boolean).join(' ・ ')}</small></button>`;
         }).join('')}</div>`;
-        next = `<button class="btn" data-ob="finish" ${ob.picks.length ? '' : 'disabled'}>はじめる！</button>`;
+        next = `<button class="btn" data-ob="finish" ${ob.picks.length ? '' : 'disabled'}>冒険を始める</button>`;
         break;
       }
     }
@@ -796,7 +831,7 @@
     const d = b.dataset;
     if (d.ob === 'close') { $('ob').classList.add('hidden'); return; }
     if (d.ob === 'back') { ob.step--; return renderOb(); }
-    if (d.ob === 'next') { if (ob.step === 0) ob.name = ($('obName').value.trim() || 'ぼうけんしゃ').slice(0, 12); ob.step++; return renderOb(); }
+    if (d.ob === 'next') { if (ob.step === 0) ob.name = ($('obName').value.trim() || '冒険者').slice(0, 12); ob.step++; return renderOb(); }
     if (d.goal) { ob.goals = ob.goals.includes(d.goal) ? ob.goals.filter(g => g !== d.goal) : ob.goals.length < 3 ? ob.goals.concat(d.goal) : ob.goals; return renderOb(); }
     if (d.fit) { ob.fit = Number(d.fit); ob.step++; return renderOb(); }
     if (d.time) { ob.time = Number(d.time); ob.step++; return renderOb(); }
@@ -815,43 +850,43 @@
     const when = state.log[today] ? addDays(today, 1) : today;
     activeTasks().forEach(t => { t.archivedAt = when; });
     ob.order.filter(k => ob.picks.includes(k)).forEach(key => {
-      const t = { id: uid(), ...fromTemplate(CATALOG.find(c => c.key === key), p) };
+      const t = makeTask(CAT.get(key), p);
       if (when !== today) t.from = when;
       state.tasks.push(t);
     });
     const first = !state.onboarded;
     state.onboarded = true;
-    if (first) addMail({ icon: '🗡', title: 'ぼうけんの はじまり', text: 'クエストを こなすと EXPが もらえて、ボスにも ダメージを あたえられる。こまったら みぎうえの「？」を みてね。' });
+    if (first) addMail({ icon: '🗡', title: '冒険の始まり', text: 'クエストをこなすとEXPが手に入り、ボスにもダメージを与えられる。ルールは右上の「？」で確認できる。' });
     save();
     $('ob').classList.add('hidden');
     showTab('today');
     render();
-    say(when === today ? `${esc(state.name)}の ぼうけんが はじまった！` : 'あたらしい クエストは あしたから！');
+    say(when === today ? `${esc(state.name)}の冒険が始まった！` : '新しいクエストは明日から始まる！');
     SFX.clear(); flash();
   }
 
-  // ---------- リマインダー ----------
+  // ---------- 通知 ----------
   const canNotify = () => 'Notification' in window;
   function openReminder() {
     const n = state.notify;
-    openSheet('リマインダー', `
-      <label class="lb">つうち</label><div class="seg"><button class="btn ${n.on ? 'on' : ''}" data-n="1">ON</button><button class="btn ${!n.on ? 'on' : ''}" data-n="0">OFF</button></div>
-      <div class="row"><div><label class="lb">あさ</label><input type="time" id="nM" value="${n.morning}"></div><div><label class="lb">よる</label><input type="time" id="nE" value="${n.evening}"></div></div>
-      <div class="dim mt8">アプリを とじていると とどかない ことが あります</div>
-      <button class="btn blue full mt12" id="icsBtn">カレンダーに とうろく（かくじつ）</button>`, body => {
+    openSheet('通知', `
+      <label class="lb">通知</label><div class="seg"><button class="btn ${n.on ? 'on' : ''}" data-n="1">ON</button><button class="btn ${!n.on ? 'on' : ''}" data-n="0">OFF</button></div>
+      <div class="row"><div><label class="lb">朝（今日のクエスト）</label><input type="time" id="nM" value="${n.morning}"></div><div><label class="lb">夜（やり残し）</label><input type="time" id="nE" value="${n.evening}"></div></div>
+      <div class="dim mt8">アプリを完全に閉じていると届かない場合があります。</div>
+      <button class="btn blue full mt12" id="icsBtn">カレンダーに登録（確実に届く）</button>`, body => {
       body.querySelector('#nM').onchange = e => { n.morning = e.target.value || '07:00'; delete n.sent.morning; save(); };
       body.querySelector('#nE').onchange = e => { n.evening = e.target.value || '21:00'; delete n.sent.evening; save(); };
       body.querySelector('#icsBtn').onclick = exportIcs;
       body.querySelectorAll('[data-n]').forEach(b => b.onclick = async () => {
         SFX.tap();
         if (b.dataset.n === '0') { n.on = false; save(); return openReminder(); }
-        if (!canNotify()) { alert('この ブラウザは つうちに たいおう していません。iPhoneは ホームがめんに ついか してから ためしてください。'); return; }
-        const p = await Notification.requestPermission();
-        if (p !== 'granted') { alert('つうちが きょか されませんでした。'); return; }
+        if (!canNotify()) { toast('このブラウザは通知に対応していません'); return; }
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') { toast('通知が許可されませんでした'); return; }
         n.on = true;
         const now = new Date(), hm = now.getHours() * 60 + now.getMinutes();
         ['morning', 'evening'].forEach(type => { if (hm >= toMin(n[type])) n.sent[type] = todayKey(); });
-        save(); notify('Life Quest', 'つうちを ONに しました'); openReminder();
+        save(); notify('Life Quest', '通知をONにしました'); openReminder();
       });
     });
   }
@@ -870,8 +905,8 @@
       const at = toMin(n[type]);
       if (n.sent[type] === k || hm < at || hm > at + 120) continue;
       n.sent[type] = k; save();
-      if (type === 'morning') notify('きょうの クエスト', count ? `${count}この クエストが まっている` : 'きょうは やすみ');
-      else if (count && !day.cleared) notify('まだ まにあう！', `あと ${needFor(count) - day.done}こで たっせい`);
+      if (type === 'morning') notify('今日のクエスト', count ? `${count}個のクエストが待っている` : '今日は休みです');
+      else if (count && !day.cleared) notify('まだ間に合う！', `あと${needFor(count) - day.done}個で達成`);
     }
   }
   function exportIcs() {
@@ -882,7 +917,7 @@
       `DTSTART:${ymd}T${time.replace(':', '')}00`, 'DURATION:PT10M', 'RRULE:FREQ=DAILY', `SUMMARY:${summary}`, `URL:${APP_URL}`,
       'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${summary}`, 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT'];
     const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Life Quest//JA', 'CALSCALE:GREGORIAN',
-      ...ev('morning', state.notify.morning, 'Life Quest：きょうの クエスト'), ...ev('evening', state.notify.evening, 'Life Quest：やりのこし チェック'), 'END:VCALENDAR'];
+      ...ev('morning', state.notify.morning, 'Life Quest：今日のクエスト'), ...ev('evening', state.notify.evening, 'Life Quest：やり残しチェック'), 'END:VCALENDAR'];
     saveFile(new Blob([lines.join('\r\n')], { type: 'text/calendar' }), 'life-quest-reminder.ics');
   }
 
@@ -899,13 +934,13 @@
   }
   async function backup() {
     const ok = await saveFile(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }), `life-quest-${todayKey()}.json`);
-    if (ok) { state.lastBackup = todayKey(); save(); toast('バックアップ しました'); }
+    if (ok) { state.lastBackup = todayKey(); save(); toast('バックアップしました'); }
   }
   function openBackup() {
-    openSheet('バックアップ・ふっかつ', `
-      <div class="dim">${state.lastBackup ? `さいご：${md(state.lastBackup)}（${daysBetween(state.lastBackup, todayKey())}にち まえ）` : 'まだ バックアップ していません'}</div>
-      <button class="btn full mt12" id="bkSave">ファイルに ほぞん</button>
-      <button class="btn gray full mt12" id="bkLoad">ファイルから ふっかつ</button>`, body => {
+    openSheet('バックアップ・復元', `
+      <div class="dim">${state.lastBackup ? `最終バックアップ：${md(state.lastBackup)}（${daysBetween(state.lastBackup, todayKey())}日前）` : 'まだバックアップしていません'}</div>
+      <button class="btn full mt12" id="bkSave">ファイルに保存</button>
+      <button class="btn gray full mt12" id="bkLoad">ファイルから復元</button>`, body => {
       body.querySelector('#bkSave').onclick = async () => { await backup(); openBackup(); };
       body.querySelector('#bkLoad').onclick = () => $('importFile').click();
     });
@@ -915,15 +950,15 @@
     try {
       const s = JSON.parse(await f.text());
       if (!Array.isArray(s.tasks) || typeof s.log !== 'object') throw 0;
-      if (!confirm('いまの きろくを うわがき します。よろしいですか？')) return;
+      if (!confirm('現在の記録を上書きします。よろしいですか？')) return;
       state = migrate(s); state.onboarded = true; state.seenUntil = addDays(todayKey(), -1); state.lastLevel = levelOf(compute().total).lv;
-      save(); closeSheet(); render(); toast('ふっかつ しました');
-    } catch (err) { alert('ファイルを よみこめませんでした'); }
+      save(); closeSheet(); render(); toast('復元しました');
+    } catch (err) { toast('ファイルを読み込めませんでした'); }
     e.target.value = '';
   });
   function openReset() {
-    openSheet('さいしょから やりなおす', `<div>すべての きろくが きえます。もとに もどせません。</div>
-      <div class="row mt12"><button class="btn gray" id="rsNo">やめる</button><button class="btn red" id="rsYes">けす</button></div>`, body => {
+    openSheet('データを全て削除', `<div>すべての記録が消えます。元に戻せません。</div>
+      <div class="row mt12"><button class="btn gray" id="rsNo">やめる</button><button class="btn red" id="rsYes">削除</button></div>`, body => {
       body.querySelector('#rsNo').onclick = closeSheet;
       body.querySelector('#rsYes').onclick = () => { state = freshState(); save(); closeSheet(); render(); startOnboarding(false); };
     });
@@ -937,10 +972,10 @@
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
   function openInstall() {
-    const msg = standalone() ? 'インストール ずみ です'
-      : installEvt ? 'ホームがめんに ついか できます'
-      : isIOS ? 'Safariの きょうゆう ボタン →「ホーム画面に追加」' : 'ブラウザの メニュー →「アプリを インストール」';
-    openSheet('アプリを インストール', `<div>${msg}</div>${installEvt && !standalone() ? '<button class="btn full mt12" id="instBtn">ついか する</button>' : ''}`, body => {
+    const msg = standalone() ? 'インストール済みです。'
+      : installEvt ? 'ホーム画面に追加できます。'
+      : isIOS ? 'Safariの共有ボタン →「ホーム画面に追加」' : 'ブラウザのメニュー →「アプリをインストール」';
+    openSheet('インストール', `<div>${msg}</div>${installEvt && !standalone() ? '<button class="btn full mt12" id="instBtn">追加する</button>' : ''}`, body => {
       const b = body.querySelector('#instBtn');
       if (b) b.onclick = async () => { installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; closeSheet(); };
     });
@@ -958,7 +993,7 @@
   if (!state.onboarded) {
     if (!Object.keys(state.log).length) startOnboarding(false);
     else {
-      openSheet('おしらせ', `<div>しつもんに こたえて、きみに あった クエストを えらびなおしますか？</div><div class="dim mt8">レベルや EXPは そのまま のこります</div>
+      openSheet('お知らせ', `<div>質問に答えて、自分に合ったクエストを選び直しますか？</div><div class="dim mt8">レベルとEXPはそのまま残ります。</div>
         <div class="row mt12"><button class="btn gray" id="askNo">いいえ</button><button class="btn" id="askYes">はい</button></div>`, body => {
         body.querySelector('#askYes').onclick = () => startOnboarding(true);
         body.querySelector('#askNo').onclick = () => { closeSheet(); state.onboarded = true; save(); render(); };
