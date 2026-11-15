@@ -5,8 +5,27 @@
 
 ## 遊び方
 
-`index.html` をブラウザで開くだけ（インストール・サーバー不要、スマホ可）。
-GitHub Pages で公開すれば、スマホのホーム画面に追加してアプリのように使えます。
+`index.html` をブラウザで開くだけでも遊べます。
+PWA に対応しているので、HTTPS で公開するとスマホのホーム画面にインストールでき、オフラインでも動きます。
+
+### スマホにインストールする（GitHub Pages）
+
+1. このブランチを `main` にマージする
+2. GitHub のリポジトリ → **Settings → Pages** → Source を「Deploy from a branch」、Branch を `main` / `/ (root)` にして保存
+3. 数分後に `https://<ユーザー名>.github.io/fitness-app/` で公開される
+4. スマホでそのURLを開いて
+   - **iPhone**: Safari の共有ボタン →「ホーム画面に追加」
+   - **Android**: Chrome の「アプリをインストール」、またはアプリ内 設定タブの「📲 ホーム画面に追加」
+
+### PWA の構成
+
+| ファイル | 役割 |
+| --- | --- |
+| `manifest.webmanifest` | アプリ名・アイコン・全画面表示の設定 |
+| `sw.js` | Service Worker。オフライン用キャッシュと通知 |
+| `icons/` | アプリアイコン（通常・maskable・Apple 用） |
+
+アプリを更新したときは `sw.js` の `VERSION` を上げると、利用者側のキャッシュが新しいものに入れ替わります。
 
 ## ルール
 
