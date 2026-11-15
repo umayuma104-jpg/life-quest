@@ -62,7 +62,7 @@
       onboarded: false, sound: true, vibe: true, lastBackup: null, backupMailed: null,
       owned: [], buys: [], gearLog: [], look: { hair: 'short', color: 0, skin: 0 },
       pulls: [], gachaLog: [], itemBuys: [], uses: [],
-      feeds: [], petLog: [], petGearLog: [], foodBuys: [], petGachaLog: [], retro: [], fontScale: 1,
+      feeds: [], petLog: [], petGearLog: [], foodBuys: [], petGachaLog: [], retro: [], weeklyDone: [], fontScale: 1,
       notify: { on: false, morning: '07:00', evening: '21:00', sent: {} },
     };
   }
@@ -86,7 +86,7 @@
     if (!Array.isArray(s.owned)) s.owned = [];
     if (!Array.isArray(s.buys)) s.buys = [];
     if (!Array.isArray(s.gearLog)) s.gearLog = [];
-    ['pulls', 'gachaLog', 'itemBuys', 'uses', 'feeds', 'petLog', 'petGearLog', 'foodBuys', 'petGachaLog', 'retro'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+    ['pulls', 'gachaLog', 'itemBuys', 'uses', 'feeds', 'petLog', 'petGearLog', 'foodBuys', 'petGachaLog', 'retro', 'weeklyDone'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
     if (!s.fontScale) s.fontScale = 1;
     if (!s.look) s.look = { hair: 'short', color: 0, skin: 0 };
     if (s.name === 'ぼうけんしゃ') s.name = '冒険者';
@@ -223,23 +223,45 @@
       reward: Math.round(hp * 0.3), gold: GOLD_BOSS + 10 * Math.min(n, 40) };
   }
 
-  // ---------- 今週・今月の目標 ----------
-  // 週ごとに、今のクエストから作れる目標の中から3つを選ぶ（日付で決まるので毎回同じ）
-  const GOAL_REWARD = { week: [100, 10], month: [400, 40] };
-  function weekGoals(ws) {
-    const cands = [
-      { key: 'clear', name: '達成 5日', stat: 'clear', goal: 5 },
-      { key: 'perfect', name: '全クリア 3日', stat: 'perfect', goal: 3 },
-      { key: 'boss', name: '今週のボスを倒す', stat: 'boss', goal: 1 },
-    ];
-    activeTasks().forEach(t => {
-      if (t.type === 'count') cands.push({ key: 'sum_' + t.id, name: `${t.name} 合計${fmtNum(t.target * 5)}${t.unit}`, stat: 'sum_' + t.id, goal: t.target * 5 });
-      if (t.type === 'wake') cands.push({ key: 'wake', name: '早起き 5回', stat: 'wake', goal: 5 });
+  // ---------- 週間クエスト・今月の目標 ----------
+  // 週間クエストは毎週月曜に5個。3種類から日付で決まる組み合わせで選ぶ（何度計算しても同じ）
+  //   強化：いつものクエストを多めに（記録から自動判定）
+  //   回数：いつものクエストを週に何回かクリア（記録から自動判定）
+  //   たまに：毎日は難しいけど、たまにはやった方がいいこと（「やった！」で記録）
+  const GOAL_REWARD = { month: [400, 40] };
+  const WQ_REWARD = { boost: { xp: 30, g: 80, gem: 5 }, times: { xp: 20, g: 60, gem: 5 }, occ: { xp: 40, g: 100, gem: 10 } };
+  const WQ_KIND = { boost: '強化', times: '回数', occ: 'たまに' };
+  const OCCASIONAL = [
+    ['bigclean', '部屋の大掃除をする', 'broom'], ['longmove', 'いつもより長く体を動かす（45分以上）', 'shoe'],
+    ['finishbook', '本を1冊読み終える', 'book'], ['mealprep', '作り置きの料理をする', 'apple'],
+    ['contact', '家族や友人に連絡する', 'heart'], ['detox', 'スマホを見ない半日をつくる', 'phone'],
+    ['review', '1週間の振り返りを書く', 'pen'], ['newwalk', '行ったことのない場所を散歩する', 'shoe'],
+    ['longstretch', '30分以上ストレッチ・ヨガをする', 'lotus'], ['earlybed', '22時前に寝る日をつくる', 'moon'],
+    ['futon', '布団を干して部屋を換気する', 'sun'], ['declutter', '使っていない物を3つ手放す', 'broom'],
+  ];
+  function weeklyQuests(ws) {
+    let h = hash('wq' + ws);
+    const take = list => { if (!list.length) return null; const x = list.splice(h % list.length, 1)[0]; h = Math.floor(h / 7) + 101; return x; };
+    const tasks = activeTasks();
+    const boosts = [], times = [];
+    tasks.forEach(t => {
+      if (t.type === 'count') {
+        const st = t.step || autoStep(t.target, t.unit);
+        const n = Math.max(t.target + st, Math.round(t.target * 2.5 / st) * st);
+        boosts.push({ key: 'max_' + t.id, kind: 'boost', icon: t.icon, name: `${t.name}を1日で${fmtNum(n)}${t.unit}`, stat: 'max_' + t.id, goal: n });
+      }
+      if (t.type === 'wake') {
+        const early = fromMin(Math.max(240, toMin(t.wake) - 30));
+        boosts.push({ key: 'early_' + t.id, kind: 'boost', icon: t.icon, name: `いつもより30分早く起きる（${early}まで）`, stat: 'early_' + t.id, goal: 1, wakeId: t.id, early });
+      }
+      if (t.days.length >= 3) times.push({ key: 'times_' + t.id, kind: 'times', icon: t.icon, name: `${taskName(t)}を週3回クリア`, stat: 'done_' + t.id, goal: 3 });
     });
-    const picked = [];
-    let h = hash('goal' + ws);
-    while (picked.length < 3 && cands.length) { picked.push(cands.splice(h % cands.length, 1)[0]); h = Math.floor(h / 7) + 13; }
-    return picked;
+    const occ = OCCASIONAL.map(([key, name, icon]) => ({ key: 'occ_' + key, kind: 'occ', icon, name, stat: 'm_occ_' + key, goal: 1, manual: true }));
+    const out = [];
+    for (let i = 0; i < 2; i++) { const x = take(boosts); if (x) out.push(x); }
+    const tm = take(times); if (tm) out.push(tm);
+    while (out.length < 5) out.push(take(occ));
+    return out.map(q => Object.assign(q, WQ_REWARD[q.kind]));
   }
   const monthGoals = () => [
     { key: 'm_clear', name: '達成 20日', stat: 'clear', goal: 20 },
@@ -273,7 +295,9 @@
     for (let k = first; k <= tKey; k = addDays(k, 1)) {
       const ws = weekStart(k);
       if (!boss || boss.ws !== ws) { boss = bossFor(ws, byId, firstWs); bosses[ws] = boss; poison = 0; }
-      if (!wk || wk.ws !== ws) wk = { ws, goals: weekGoals(ws), c: {} };
+      if (!wk || wk.ws !== ws) wk = { ws, goals: weeklyQuests(ws), c: {} };
+      // 「たまに」の週間クエストは、やった日に記録されている
+      state.weeklyDone.forEach(e => { if (e.ws === ws && e.k === k) wk.c['m_' + e.key] = 1; });
       if (!mo || mo.m !== monthOf(k)) mo = { m: monthOf(k), goals: monthGoals(), c: {} };
       const entries = state.log[k] || {};
       const ids = schedIds(k).filter(id => byId[id]);
@@ -320,8 +344,10 @@
         bossDmg += hit;
         petDmg += Math.round(hit * pf.follow / 100);
         if (c >= 1 && ids.includes(id)) done++;
-        if (t.type === 'wake' && c >= 1) { st.wakes++; wk.c.wake = (wk.c.wake || 0) + 1; }
-        if (t.type === 'count') wk.c['sum_' + id] = (wk.c['sum_' + id] || 0) + (Number(entries[id]) || 0);
+        if (t.type === 'wake' && c >= 1) st.wakes++;
+        if (c >= 1) wk.c['done_' + id] = (wk.c['done_' + id] || 0) + 1;
+        if (t.type === 'count') wk.c['max_' + id] = Math.max(wk.c['max_' + id] || 0, Number(entries[id]) || 0);
+        if (t.type === 'wake') wk.goals.forEach(q => { if (q.wakeId === id && toMin(entries[id]) <= toMin(q.early)) wk.c['early_' + id] = 1; });
         if (t.type === 'count' && t.unit === '回') st.reps += Number(entries[id]) || 0;
       }
       const count = ids.length, recorded = Object.keys(entries).length > 0;
@@ -386,6 +412,13 @@
       if (cleared) gems += GEM_CLEAR;
       dayGold += Math.round(dayXp / 2);
       dayGold = Math.round(dayGold * (1 + goldPct / 100));
+      wk.goals.forEach(q => {
+        const gk = `week:${wk.ws}:${q.key}`;
+        if (!goalsDone[gk] && (wk.c[q.stat] || 0) >= q.goal) {
+          goalsDone[gk] = k; total += q.xp; dayGold += q.g; gems += q.gem;
+          events.push({ k, icon: '📜', title: `週間クエスト「${q.name}」`, text: `クリア！ 報酬 ${q.xp}EXP・${q.g}G・${q.gem}💎` });
+        }
+      });
       const lvEnd = levelOf(total).lv;
       if (lvEnd > lvNow) {
         const n = lvEnd - lvNow;
@@ -411,13 +444,13 @@
         }
       });
       // 目標の達成チェック
-      [['week', wk.ws, wk], ['month', mo.m, mo]].forEach(([kind, id, box]) => box.goals.forEach(g => {
+      [['month', mo.m, mo]].forEach(([kind, id, box]) => box.goals.forEach(g => {
         const gk = `${kind}:${id}:${g.key}`;
         if (!goalsDone[gk] && (box.c[g.stat] || 0) >= g.goal) {
           goalsDone[gk] = k;
           const [gg, gm] = GOAL_REWARD[kind];
           dayGold += gg; gems += gm;
-          events.push({ k, icon: '🎯', title: `${kind === 'week' ? '今週' : '今月'}の目標「${g.name}」`, text: `目標を達成した！ 報酬 ${gg}G・${gm}💎` });
+          events.push({ k, icon: '🎯', title: `今月の目標「${g.name}」`, text: `目標を達成した！ 報酬 ${gg}G・${gm}💎` });
         }
       }));
       earned += dayGold;
@@ -571,7 +604,7 @@
       sec('装備・ガチャ・アイテム', ['頭・足・武器は攻撃、体・脚・サブは守り', 'ガチャ限定装備は火傷・毒などの特殊能力つき。同じセットを3・6部位そろえるとセット効果', 'アイテムは右上の👜から使う']),
       sec('ペット', [`Lv${P.UNLOCK_LV}で仲間になる。連れているペットは追撃やステータスで手伝ってくれる`, '餌やクエストで経験値がたまり、レベルが上がるほど強くなる', '首飾りと帽子を装備できる。ペットガチャはゴールドでもジェムでも引ける']),
       sec('季節イベント', ['正月・バレンタイン・夏休み・ハロウィン・クリスマスの期間中は自動で開催', '限定ボスを倒すと100💎と限定品（かぼちゃおばけ・限定のペット装備）', '期間中だけの特典あり。ペットガチャに限定品が出やすくなる']),
-      sec('目標・昨日の記録', [`今週の目標3つ（各${GOAL_REWARD.week[0]}G・${GOAL_REWARD.week[1]}💎）と今月の目標2つ（各${GOAL_REWARD.month[0]}G・${GOAL_REWARD.month[1]}💎）`, `記録し忘れた昨日の分は、週に${RETRO_MAX}回まで追加・修正できる`]),
+      sec('週間クエスト・目標', ['週間クエストは毎週月曜に5個。「強化」（いつもより多く）と「回数」（週に何回か）は記録から自動、「たまに」（大掃除など）は「やった！」で記録', `今月の目標2つ（各${GOAL_REWARD.month[0]}G・${GOAL_REWARD.month[1]}💎）`, `記録し忘れた昨日の分は、週に${RETRO_MAX}回まで追加・修正できる`]),
       sec('その他', ['早起きは30分以内の遅れならEXP半分', '回数を増やすと獲得EXPも増える', '日付の切り替えは午前3時']),
     ].join(''));
   }
@@ -1169,19 +1202,41 @@
     openSheet('ガチャ履歴', list.length ? list.map(p => `<div class="eq"><span><span class="rare r${p.r}">${stars(p.r)}</span> ${resultName(p)}${p.refund ? ` <span class="dim">（${p.refund}💎）</span>` : ''}</span><span class="dim">${md(p.k)}</span></div>`).join('') : '<div class="dim">まだ引いていません</div>');
   }
 
-  // ---------- 今週・今月の目標 ----------
+  // ---------- 週間クエスト・今月の目標 ----------
   function renderGoals(c) {
-    const row = (g, kind) => {
-      const [gg, gm] = GOAL_REWARD[kind];
-      const pct = Math.min(100, g.cur / g.goal * 100);
+    const t = todayKey(), left = 6 - ((dow(t) + 6) % 7);
+    const wrow = q => {
+      const rw = `+${q.xp}EXP・${q.g}G・${q.gem}💎`;
+      const right = q.manual
+        ? (q.done ? `<button class="btn sm green" data-wq="${q.key}">✓ 完了</button>` : `<button class="btn sm" data-wq="${q.key}">やった！</button>`)
+        : `<span class="dim">${q.done ? '<span class="g">✓ クリア</span>' : `${fmtNum(Math.min(q.cur, q.goal))}/${fmtNum(q.goal)}`}</span>`;
+      return `<div class="wq ${q.done ? 'done' : ''}"><div class="ic">${iconHtml(q.icon, 22)}</div>
+        <div class="grow"><div class="wq-name"><span class="wq-kind k-${q.kind}">${WQ_KIND[q.kind]}</span>${esc(q.name)}</div>
+          ${q.manual ? '' : `<div class="bar goalbar"><i style="width:${Math.min(100, q.cur / q.goal * 100)}%"></i></div>`}
+          <div class="goal-rw">${q.done ? '<span class="dim">報酬を受け取った</span>' : rw}</div></div>${right}</div>`;
+    };
+    const mrow = g => {
+      const [gg, gm] = GOAL_REWARD.month;
       return `<div class="goal ${g.done ? 'done' : ''}"><div class="goal-top"><span>${g.done ? '✓ ' : ''}${esc(g.name)}</span>
         <span class="dim">${g.done ? '達成' : `${fmtNum(Math.min(g.cur, g.goal))}/${fmtNum(g.goal)}`}</span></div>
-        <div class="bar goalbar"><i style="width:${pct}%"></i></div>
+        <div class="bar goalbar"><i style="width:${Math.min(100, g.cur / g.goal * 100)}%"></i></div>
         <div class="goal-rw">${g.done ? '<span class="dim">報酬を受け取った</span>' : `報酬 ${gg}G・${gm}💎`}</div></div>`;
     };
-    $('goalCard').innerHTML = `<div class="card-h"><span>今週の目標</span><span class="dim">月曜に更新</span></div>${c.goals.week.map(g => row(g, 'week')).join('')}
-      <div class="card-h mt12"><span>今月の目標</span></div>${c.goals.month.map(g => row(g, 'month')).join('')}`;
+    const doneN = c.goals.week.filter(q => q.done).length;
+    $('goalCard').innerHTML = `<div class="card-h"><span>週間クエスト <span class="prog">${doneN}/${c.goals.week.length}</span></span><span class="dim">${left ? `あと${left}日` : '今日まで'}</span></div>${c.goals.week.map(wrow).join('')}
+      <div class="card-h mt12"><span>今月の目標</span></div>${c.goals.month.map(mrow).join('')}`;
   }
+  // 「たまに」の週間クエストを記録・取り消し（同じ週の間だけ）
+  $('goalCard').addEventListener('click', e => {
+    const b = e.target.closest('[data-wq]'); if (!b) return;
+    const t = todayKey(), ws = weekStart(t), key = b.dataset.wq;
+    const i = state.weeklyDone.findIndex(x => x.ws === ws && x.key === key);
+    if (i >= 0) state.weeklyDone.splice(i, 1); else state.weeklyDone.push({ ws, key, k: t });
+    save(); render();
+    const q = C.goals.week.find(x => x.key === key);
+    if (i < 0) { say(`週間クエスト「${esc(q.name)}」クリア！<br>+${q.xp}EXP・${q.g}G・${q.gem}💎`); SFX.clear(); vibrate([40, 30, 80]); }
+    else SFX.undo();
+  });
 
   // ---------- 昨日の記録（週に2回まで） ----------
   const RETRO_MAX = 2;

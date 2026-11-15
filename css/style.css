@@ -411,3 +411,13 @@ html.tut-lock, html.tut-lock body { overflow: hidden; overscroll-behavior: none;
 .battle-pop .bp-card { width: 100%; max-width: 520px; margin: 0; box-shadow: 0 8px 0 #000a; }
 @keyframes bpin { from { opacity: 0; } }
 @keyframes bpout { to { opacity: 0; } }
+
+/* 週間クエスト */
+.wq { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.wq:first-of-type { border-top: 0; }
+.wq .ic { width: 26px; flex-shrink: 0; display: grid; place-items: center; }
+.wq-name { font-size: 14px; }
+.wq.done .wq-name { color: var(--g); }
+.wq-kind { display: inline-block; font-size: 10px; border-radius: 4px; padding: 0 5px; margin-right: 6px; color: #241a00; vertical-align: 1px; }
+.wq-kind.k-boost { background: #ff9a6a; } .wq-kind.k-times { background: #8fd3ff; } .wq-kind.k-occ { background: #c8a0ff; }
+.wq .btn { flex-shrink: 0; }

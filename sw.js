@@ -1,6 +1,6 @@
 // Life Quest service worker: オフライン対応と通知
 // アプリを更新したら VERSION を上げると、古いキャッシュが入れ替わる
-const VERSION = 'lq-v12';
+const VERSION = 'lq-v13';
 const FONT_CACHE = 'lq-fonts';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/style.css', './js/app.js', './js/sprites.js', './js/catalog.js', './js/gear.js', './js/pets.js', './js/events.js',
