@@ -2002,6 +2002,47 @@
     });
   }
 
+  // 初めて開いた時：冒険を始める前にホーム画面への追加をすすめる
+  // （iPhoneはSafariとホーム画面のアプリで記録が別々になるので、先に追加してもらう）
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const inAppBrowser = /Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent);
+  const SHARE_ICON = '<svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true" style="vertical-align:-3px"><path d="M8 1v10M4 5l4-4 4 4M3 8H1v9h14V8h-2" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+  function needInstallGate() {
+    return !state.onboarded && !Object.keys(state.log).length && !standalone() && (isIOS || isAndroid) && !state.installSkipped;
+  }
+  function showInstallGate() {
+    let talk, body, main = '';
+    if (inAppBrowser) {
+      talk = 'LINEなどのアプリ内ブラウザでは、ホーム画面に追加できない。右上のメニューから「ブラウザで開く」を選んでほしい。';
+      body = `<ol class="inst-steps"><li>右上の「…」や「︙」を押す</li><li>「${isIOS ? 'Safari' : 'ブラウザ'}で開く」を押す</li><li>開いたページでホーム画面に追加する</li></ol>`;
+    } else if (isIOS) {
+      talk = '冒険を始める前に、このアプリをホーム画面に追加しておこう。全画面で開けて、毎日の記録も消えにくくなる。';
+      body = `<ol class="inst-steps"><li>画面下（iPadは右上）の共有ボタン ${SHARE_ICON} を押す</li><li>「ホーム画面に追加」を押す（見つからない時は下にスクロール）</li><li>右上の「追加」を押す</li><li>ホーム画面の Life Quest のアイコンから開き直す</li></ol>
+        <div class="inst-warn">⚠ iPhoneでは、Safariで遊んだ記録はホーム画面のアプリに引き継がれません。先に追加してから始めてください。</div>`;
+    } else {
+      talk = '冒険を始める前に、このアプリをホーム画面に追加しておこう。全画面で開けて、通知も届きやすくなる。';
+      body = installEvt ? '<button class="btn full" id="instGo">ホーム画面に追加する</button>'
+        : '<ol class="inst-steps"><li>右上のメニュー（︙）を押す</li><li>「ホーム画面に追加」または「アプリをインストール」を押す</li><li>ホーム画面のアイコンから開き直す</li></ol>';
+    }
+    $('obBox').innerHTML = `<div class="talk"><span class="typing" id="obSay"></span></div>${body}
+      <div class="nav"><button class="btn gray" id="instSkip">追加せずに始める</button></div>`;
+    $('ob').classList.remove('hidden');
+    typeText($('obSay'), talk);
+    const go = $('instGo');
+    if (go) go.onclick = async () => {
+      installEvt.prompt();
+      const r = await installEvt.userChoice.catch(() => null);
+      installEvt = null;
+      if (r && r.outcome === 'accepted') {
+        $('obBox').innerHTML = '<div class="talk">追加できた！ このままでも、ホーム画面のアイコンからでも記録は同じ。さあ、冒険を始めよう。</div><div class="nav"><button class="btn" id="instSkip">冒険を始める</button></div>';
+        $('instSkip').onclick = () => { state.installSkipped = true; save(); startOnboarding(false); };
+      } else showInstallGate();
+    };
+    $('instSkip').onclick = () => { state.installSkipped = true; save(); startOnboarding(false); };
+  }
+  // Androidでは追加ボタンの準備が少し遅れて届くので、届いたら画面を作り直す
+  window.addEventListener('beforeinstallprompt', () => { if (!$('ob').classList.contains('hidden') && $('instSkip') && !$('instGo') && !inAppBrowser) showInstallGate(); });
+
   // ---------- 起動 ----------
   let lastKey = todayKey();
   setInterval(() => { if (todayKey() !== lastKey) { lastKey = todayKey(); render(); } checkNotify(); }, 30000);
@@ -2021,7 +2062,8 @@
   };
   if (state.onboarded && !state.tutorialDone) setTimeout(tryTutorial, 1500);
   if (!state.onboarded) {
-    if (!Object.keys(state.log).length) startOnboarding(false);
+    if (needInstallGate()) showInstallGate();
+    else if (!Object.keys(state.log).length) startOnboarding(false);
     else {
       openSheet('お知らせ', `<div>質問に答えて、自分に合ったクエストを選び直しますか？</div><div class="dim mt8">レベルとEXPはそのまま残ります。</div>
         <div class="row mt12"><button class="btn gray" id="askNo">いいえ</button><button class="btn" id="askYes">はい</button></div>`, body => {
